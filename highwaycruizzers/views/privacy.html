@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - {{.Settings.SiteName}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+    <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    {{if .Settings.LogoURL}}
+                    <img src="{{.Settings.LogoURL}}" class="h-10 w-auto">
+                    {{else}}
+                    <h1 class="text-2xl font-black" style="color: {{.Settings.PrimaryColor}}">{{.Settings.SiteName}}</h1>
+                    {{end}}
+                </div>
+                <a href="/" class="text-sm hover:underline" style="color: {{.Settings.PrimaryColor}}">← Back</a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm p-8">
+            <h1 class="text-3xl font-bold mb-2">Privacy Policy</h1>
+            <p class="text-slate-500 text-sm mb-8">Last Updated: March 15, 2025</p>
+
+            <div class="space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold mb-3">1. Information We Collect</h2>
+                    <ul class="list-disc pl-6 text-slate-600 space-y-1">
+                        <li>Account info: name, email, phone, handle</li>
+                        <li>Ride data: posts, requests, participation</li>
+                        <li>Verification documents: DL, RC (encrypted)</li>
+                        <li>Technical data: IP address, device info</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-bold mb-3">2. How We Use Your Data</h2>
+                    <ul class="list-disc pl-6 text-slate-600 space-y-1">
+                        <li>Connect riders and facilitate rides</li>
+                        <li>Verify rider credentials</li>
+                        <li>Improve platform features</li>
+                        <li>Send important notifications</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-bold mb-3">3. Data Sharing</h2>
+                    <p class="text-slate-600">We do NOT sell your data. We share only:</p>
+                    <ul class="list-disc pl-6 text-slate-600 space-y-1 mt-2">
+                        <li>With other users (public profile, ride posts)</li>
+                        <li>When required by law</li>
+                        <li>With your consent</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-bold mb-3">4. Data Security</h2>
+                    <ul class="list-disc pl-6 text-slate-600 space-y-1">
+                        <li>Passwords hashed with bcrypt</li>
+                        <li>Encrypted sensitive documents</li>
+                        <li>HTTPS for all connections</li>
+                        <li>Regular security audits</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-bold mb-3">5. Your Rights</h2>
+                    <ul class="list-disc pl-6 text-slate-600 space-y-1">
+                        <li>Access your data</li>
+                        <li>Correct inaccurate information</li>
+                        <li>Delete your account</li>
+                        <li>Export your data</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-bold mb-3">6. Contact Us</h2>
+                    <p class="text-slate-600">Email: privacy@highwaycruizzers.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

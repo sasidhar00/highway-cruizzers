@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace - {{.Settings.SiteName}}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <div>
+                    {{if and .Settings .Settings.LogoURL}}
+                    <img src="{{.Settings.LogoURL}}" alt="{{.Settings.SiteName}}" class="h-12 w-auto object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                    <h1 class="text-2xl font-black tracking-tighter hidden" style="color: {{.Settings.PrimaryColor}}">{{.Settings.SiteName}}</h1>
+                    {{else}}
+                    <h1 class="text-2xl font-black tracking-tighter" style="color: #e85d04">{{.Settings.SiteName}}</h1>
+                    {{end}}
+                    <p class="text-slate-500 text-sm">Buy & Sell Bike Gear, Accessories & Parts</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-full transition flex items-center gap-2 text-sm font-medium">
+                        <span>🏠</span> Back to Rides
+                    </a>
+                    <button onclick="openSellModal()" class="text-white px-5 py-2 rounded-full transition flex items-center gap-2 text-sm font-medium shadow-md" style="background-color: {{.Settings.PrimaryColor}}">
+                        <span>➕</span> Sell Item
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="flex gap-3 mb-6 overflow-x-auto pb-2">
+            <a href="/marketplace" class="px-5 py-2 rounded-full font-semibold text-sm transition shadow-sm" style="background-color: {{.Settings.PrimaryColor}}; color: white">All Items</a>
+            {{range .Categories}}
+            <a href="/marketplace?category={{.Name}}" class="px-5 py-2 rounded-full bg-white text-slate-700 hover:bg-slate-100 font-semibold text-sm transition border border-slate-200">
+                {{.Icon}} {{.Name}}
+            </a>
+            {{end}}
+        </div>
+
+        <!-- Products Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {{range .Products}}
+            <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100">
+                {{if .ImageURL}}
+                <img src="{{.ImageURL}}" class="w-full h-48 object-cover" onerror="this.src='https://placehold.co/400x300/e2e8f0/black?text=No+Image'">
+                {{else}}
+                <div class="w-full h-48 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                    <span class="text-4xl">🛍️</span>
+                </div>
+                {{end}}
+                <div class="p-5">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-900">{{.Title}}</h3>
+                        <span class="font-black text-lg" style="color: {{$.Settings.PrimaryColor}}">₹{{.Price}}</span>
+                    </div>
+                    <p class="text-slate-600 text-sm mb-3 line-clamp-2">{{.Description}}</p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">{{.Category}}</span>
+                        <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">{{.Condition}}</span>
+                        {{if .Location}}<span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">📍 {{.Location}}</span>{{end}}
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+                        <span class="text-xs text-slate-400">by {{.UserName}}</span>
+                        <a href="https://wa.me/919999999999?text=I'm%20interested%20in%20{{.Title}}" target="_blank" class="bg-[#25D366] text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-[#128C7E] transition">📲 Contact on WhatsApp</a>
+                    </div>
+                </div>
+            </div>
+            {{else}}
+            <div class="col-span-3 text-center py-12">
+                <div class="text-6xl mb-4">🛍️</div>
+                <h3 class="text-xl font-semibold text-slate-600 mb-2">No items listed yet</h3>
+                <p class="text-slate-400">Be the first to sell bike gear in the marketplace!</p>
+                <button onclick="openSellModal()" class="mt-4 text-white px-6 py-2 rounded-full font-semibold" style="background-color: {{.Settings.PrimaryColor}}">Sell Your Item</button>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- Sell Modal -->
+    <div id="sellModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4" onclick="closeSellModalOnOutside(event)">
+        <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-slate-100 p-4 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-slate-900">Sell Your Item</h3>
+                <button onclick="closeSellModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <form id="sellForm" method="POST" action="/marketplace/add" onsubmit="submitSellForm(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Title *</label>
+                            <input type="text" name="title" required placeholder="e.g., Royal Enfield Helmet" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Description *</label>
+                            <textarea name="description" rows="3" required placeholder="Describe your item, condition, features..." class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Price (₹) *</label>
+                            <input type="number" name="price" required placeholder="e.g., 3499" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Category *</label>
+                            <select name="category" required class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none">
+                                <option value="">Select Category</option>
+                                {{range .Categories}}
+                                <option value="{{.Name}}">{{.Icon}} {{.Name}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Condition *</label>
+                            <select name="condition" required class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none">
+                                <option value="New">🆕 New</option>
+                                <option value="Like New">✨ Like New</option>
+                                <option value="Good">👍 Good</option>
+                                <option value="Fair">📦 Fair</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
+                            <input type="text" name="image_url" placeholder="https://..." class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none">
+                            <p class="text-xs text-slate-400 mt-1">Paste a direct image URL (optional)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                            <input type="text" name="location" placeholder="City, State" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none">
+                        </div>
+                        <div class="flex gap-3 pt-2">
+                            <button type="button" onclick="closeSellModal()" class="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+                            <button type="submit" class="flex-1 text-white px-4 py-2 rounded-xl hover:opacity-90 transition font-semibold" style="background-color: {{.Settings.PrimaryColor}}">List Item</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openSellModal() {
+            {{if .CurrentUser}}
+            document.getElementById('sellModal').classList.remove('hidden');
+            document.getElementById('sellModal').classList.add('flex');
+            {{else}}
+            alert('Please login to sell items');
+            {{end}}
+        }
+
+        function closeSellModal() {
+            document.getElementById('sellModal').classList.add('hidden');
+            document.getElementById('sellModal').classList.remove('flex');
+        }
+
+        function closeSellModalOnOutside(event) {
+            if (event.target === document.getElementById('sellModal')) {
+                closeSellModal();
+            }
+        }
+
+        function submitSellForm(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Show result
+                const resultDiv = document.createElement('div');
+                resultDiv.innerHTML = html;
+                document.body.appendChild(resultDiv);
+                if (html.includes('✅')) {
+                    setTimeout(() => {
+                        window.location.href = '/marketplace';
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error adding product. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html>
