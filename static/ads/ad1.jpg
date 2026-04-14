@@ -1,0 +1,5 @@
+<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+			<rect width="600" height="400" fill="#e85d04"/>
+			<text x="300" y="200" font-size="30" text-anchor="middle" fill="white" font-weight="bold">Royal Enfield</text>
+			<text x="300" y="240" font-size="20" text-anchor="middle" fill="white">Accessories Sale</text>
+		</svg>

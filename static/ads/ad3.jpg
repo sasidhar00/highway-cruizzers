@@ -1,0 +1,5 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+			<rect width="400" height="300" fill="#10b981"/>
+			<text x="200" y="150" font-size="25" text-anchor="middle" fill="white" font-weight="bold">Leh-Ladakh</text>
+			<text x="200" y="190" font-size="18" text-anchor="middle" fill="white">Weekend Ride</text>
+		</svg>
