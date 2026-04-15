@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>{{.CurrentUser.Username}} - Profile | {{.Settings.SiteName}}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .profile-cover {
+            background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}});
+            height: 120px;
+        }
+        .stat-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .tab-active {
+            border-bottom: 2px solid {{.Settings.PrimaryColor}};
+            color: {{.Settings.PrimaryColor}};
+        }
+        .tab-inactive {
+            color: #64748b;
+        }
+        .sidebar-item:active { background-color: #f1f5f9; }
+        .highway-brand { font-weight: 900; letter-spacing: -2.5px; text-transform: lowercase; }
+        .boosted { border-left: 4px solid #f59e0b; background: linear-gradient(to right, #fffbeb, #ffffff); }
+        .featured { border-left: 4px solid {{.Settings.PrimaryColor}}; background: linear-gradient(to right, #fff5eb, #ffffff); }
+        .premium-badge { background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}}); }
+        .mobile-menu-open { overflow: hidden; position: fixed; width: 100%; }
+        .ad-container { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 1rem; overflow: hidden; transition: transform 0.3s ease; }
+        .ad-container:hover { transform: translateY(-2px); }
+        @media (max-width: 768px) {
+            button, a, .sidebar-item, [onclick] { cursor: pointer; min-height: 44px; }
+            input, textarea, select { font-size: 16px !important; }
+        }
+        .logo-img { max-height: 50px; width: auto; object-fit: contain; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="closeMobileMenu()"></div>
+    
+    <div class="flex flex-col lg:flex-row max-w-7xl mx-auto min-h-screen relative">
+        
+        <!-- LEFT SIDEBAR -->
+        <header id="sidebar" class="fixed top-0 left-0 w-4/5 max-w-[280px] h-full p-4 border-r border-slate-100 flex flex-col justify-between z-50 bg-white transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:w-64 shadow-xl lg:shadow-none overflow-y-auto">
+            <div>
+                <div class="p-3 mb-4 flex justify-between items-center">
+                    <div>
+                        {{if and .Settings .Settings.LogoURL}}
+                        <img src="{{.Settings.LogoURL}}" alt="{{.Settings.SiteName}}" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                        <h1 class="highway-brand text-2xl" style="color: {{.Settings.PrimaryColor}}; display: none;">{{.Settings.SiteName}}</h1>
+                        {{else}}
+                        <h1 class="highway-brand text-2xl" style="color: #e85d04">{{.Settings.SiteName}}</h1>
+                        {{end}}
+                        <p class="text-[10px] text-slate-400 mt-0.5">by kanams.ai 🏍️</p>
+                    </div>
+                    <button onclick="closeMobileMenu()" class="lg:hidden text-slate-500 text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100">&times;</button>
+                </div>
+                
+                <nav class="space-y-1">
+                    <a href="/" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🏠 Home</a>
+                    <a href="/marketplace" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🛍️ Marketplace</a>
+                    <a href="/search" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🔍 Find Rides</a>
+                    <a href="/news" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">📰 Biking News</a>
+                    <a href="/profile" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">👤 My Profile</a>
+                    {{if .IsAdmin}}
+                    <a href="/admin" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium text-amber-600">👑 Admin Dashboard</a>
+                    {{end}}
+                </nav>
+                <button onclick="{{if .CurrentUser}}document.querySelector('textarea[name=content]')?.focus(){{else}}showLoginPrompt(){{end}}; closeMobileMenu()" class="w-full text-white font-bold py-3 rounded-full mt-6 shadow-md transition active:scale-95" style="background-color: {{.Settings.PrimaryColor}}">Post Ride</button>
+            </div>
+
+            <div id="sidebar-bottom" class="mt-4">
+                {{if .CurrentUser}}
+                <div class="flex items-center gap-3 p-3 hover:bg-slate-100 rounded-xl cursor-pointer transition">
+                    {{if .CurrentUser.AvatarURL}}
+                    <img src="{{.CurrentUser.AvatarURL}}" class="w-10 h-10 rounded-2xl object-cover flex-shrink-0">
+                    {{else}}
+                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}})">🏍️</div>
+                    {{end}}
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-sm truncate">{{.CurrentUser.Username}}</div>
+                        <div class="text-slate-500 text-xs truncate">@{{.CurrentUser.Handle}}</div>
+                        <div class="text-amber-600 text-xs font-medium">₹{{.CurrentUser.Credits}} credits</div>
+                        {{if .CurrentUser.IsPremium}}<div class="text-xs font-bold text-amber-600">🏍️ PREMIUM RIDER</div>{{end}}
+                        {{if .CurrentUser.BikeModel}}<div class="text-xs text-slate-500">{{.CurrentUser.BikeModel}}</div>{{end}}
+                    </div>
+                    <button hx-post="/logout" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="text-xs font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded-lg">Logout</button>
+                </div>
+                {{else}}
+                <div class="p-4 border-t border-slate-100">
+                    <div class="flex border-b mb-4">
+                        <button onclick="switchAuthTab(0)" id="tab-login" class="flex-1 font-bold text-sm pb-2 border-b-2" style="border-color: {{.Settings.PrimaryColor}}; color: {{.Settings.PrimaryColor}}">Login</button>
+                        <button onclick="switchAuthTab(1)" id="tab-signup" class="flex-1 font-bold text-sm pb-2 text-slate-400">Join Ride</button>
+                    </div>
+                    <div id="auth-login">
+                        <form hx-post="/login" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
+                            <input type="email" name="email" placeholder="Email" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="password" name="password" placeholder="Password" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <button type="submit" class="w-full text-white font-bold py-3 rounded-xl transition text-sm" style="background-color: {{.Settings.PrimaryColor}}">Login</button>
+                        </form>
+                        <div class="text-center mt-3"><a href="/forgot-password" class="text-xs hover:underline" style="color: {{.Settings.PrimaryColor}}">Forgot password?</a></div>
+                    </div>
+                    <div id="auth-signup" class="hidden">
+                        <form hx-post="/signup" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
+                            <input type="text" name="username" placeholder="Full Name" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="text" name="handle" placeholder="Handle (no @)" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="email" name="email" placeholder="Email" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="tel" name="phone" placeholder="Mobile Number" required pattern="[0-9]{10}" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="text" name="bike_model" placeholder="Your Bike Model" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <select name="riding_exp" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                                <option value="">Riding Experience</option>
+                                <option value="Beginner (0-1 year)">Beginner (0-1 year)</option>
+                                <option value="Intermediate (1-3 years)">Intermediate (1-3 years)</option>
+                                <option value="Experienced (3-5 years)">Experienced (3-5 years)</option>
+                                <option value="Expert (5+ years)">Expert (5+ years)</option>
+                            </select>
+                            <input type="password" name="password" placeholder="Password (min 6 chars)" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition text-sm">Join the Cruizzers</button>
+                        </form>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </header>
+
+        <button onclick="toggleMobileMenu()" class="lg:hidden fixed bottom-4 left-4 z-30 text-white p-3 rounded-full shadow-lg active:scale-95 transition" style="background-color: {{.Settings.PrimaryColor}}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+
+        <!-- MAIN CONTENT - PROFILE PAGE -->
+        <main class="flex-1 w-full min-w-0 pb-20 lg:pb-0">
+            <!-- Profile Cover -->
+            <div class="profile-cover relative"></div>
+            
+            <div class="px-4 pb-6 relative">
+                <!-- Avatar and Basic Info -->
+                <div class="flex flex-col md:flex-row items-start md:items-end -mt-12 mb-6">
+                    <div class="relative">
+                        {{if .CurrentUser.AvatarURL}}
+                        <img src="{{.CurrentUser.AvatarURL}}" class="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover">
+                        {{else}}
+                        <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-{{.Settings.PrimaryColor}} to-{{.Settings.SecondaryColor}} flex items-center justify-center text-white text-3xl font-bold">
+                            {{if .CurrentUser.Username}}{{slice .CurrentUser.Username 0 1}}{{else}}U{{end}}
+                        </div>
+                        {{end}}
+                        <a href="/profile/edit" class="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md hover:bg-slate-50">
+                            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </a>
+                    </div>
+                    <div class="md:ml-4 mt-4 md:mt-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h1 class="text-2xl font-bold">{{.CurrentUser.Username}}</h1>
+                            {{if .CurrentUser.IsVerified}}<span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">✓ Verified</span>{{end}}
+                            {{if .CurrentUser.IsPremium}}<span class="bg-gradient-to-r from-amber-400 to-amber-600 text-white text-xs px-2 py-0.5 rounded-full">⭐ Premium</span>{{end}}
+                        </div>
+                        <p class="text-slate-500">@{{.CurrentUser.Handle}}</p>
+                        <div class="flex flex-wrap gap-3 mt-2 text-sm">
+                            {{if .CurrentUser.BikeModel}}<span class="flex items-center gap-1 text-slate-600">🔧 {{.CurrentUser.BikeModel}}</span>{{end}}
+                            {{if .CurrentUser.RidingExp}}<span class="flex items-center gap-1 text-slate-600">📅 {{.CurrentUser.RidingExp}}</span>{{end}}
+                        </div>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-2">
+                        <a href="/profile/edit" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-200 transition text-sm">Edit Profile</a>
+                        <button onclick="showChangePassword()" class="bg-amber-100 text-amber-700 px-4 py-2 rounded-lg hover:bg-amber-200 transition text-sm">🔐 Change Password</button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="stat-card bg-white rounded-xl p-4 text-center shadow-sm"><div class="text-2xl font-bold text-blue-600">{{.TotalRides}}</div><div class="text-xs text-slate-500">Total Rides</div></div>
+                    <div class="stat-card bg-white rounded-xl p-4 text-center shadow-sm"><div class="text-2xl font-bold text-red-500">{{.TotalLikes}}</div><div class="text-xs text-slate-500">Likes Received</div></div>
+                    <div class="stat-card bg-white rounded-xl p-4 text-center shadow-sm"><div class="text-2xl font-bold text-amber-600">{{.CurrentUser.Credits}}</div><div class="text-xs text-slate-500">Credits</div></div>
+                    <div class="stat-card bg-white rounded-xl p-4 text-center shadow-sm"><div class="text-2xl font-bold text-green-600">{{.TotalCreditsEarned}}</div><div class="text-xs text-slate-500">Credits Earned</div></div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="flex border-b">
+                        <button onclick="showTab('rides')" id="tab-rides-btn" class="px-6 py-3 font-semibold tab-active">📋 My Rides</button>
+                        <button onclick="showTab('activity')" id="tab-activity-btn" class="px-6 py-3 font-semibold tab-inactive">📊 Recent Activity</button>
+                        <button onclick="showTab('settings')" id="tab-settings-btn" class="px-6 py-3 font-semibold tab-inactive">⚙️ Settings</button>
+                    </div>
+
+                    <!-- My Rides Tab -->
+                    <div id="rides-tab" class="divide-y divide-slate-100">
+                        {{if .Rides}}
+                            {{range .Rides}}
+                            <div class="p-4 hover:bg-slate-50 transition">
+                                <div class="flex gap-3">
+                                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{$.Settings.PrimaryColor}}, {{$.Settings.SecondaryColor}})">🏍️</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                                            <span class="text-xs px-2 py-0.5 rounded-full {{if eq .Category "Ride Buddy"}}bg-emerald-100 text-emerald-700{{else if eq .Category "Rental"}}bg-blue-100 text-blue-700{{else if eq .Category "Trip"}}bg-purple-100 text-purple-700{{else}}bg-amber-100 text-amber-700{{end}}">{{.Category}}</span>
+                                            <span class="text-xs text-slate-400">{{.CreatedAt.Format "Jan 02, 2006"}}</span>
+                                        </div>
+                                        <p class="text-slate-700 text-sm">{{.Content}}</p>
+                                        {{if .FromLocation}}<div class="text-xs text-slate-400 mt-1">📍 {{.FromLocation}} → {{.ToLocation}}</div>{{end}}
+                                        <div class="flex gap-3 mt-2 text-xs text-slate-500"><span>❤️ {{.Likes}} likes</span><span>💬 {{.Seats}} seats</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{end}}
+                        {{else}}
+                            <div class="p-8 text-center text-slate-400"><div class="text-4xl mb-2">🏍️</div><p>No rides posted yet</p><a href="/" class="mt-2 inline-block text-sm" style="color: {{$.Settings.PrimaryColor}}">Post your first ride →</a></div>
+                        {{end}}
+                    </div>
+
+                    <!-- Activity Tab -->
+                    <div id="activity-tab" class="hidden divide-y divide-slate-100">
+                        {{if .Activities}}
+                            {{range .Activities}}
+                            <div class="p-4 hover:bg-slate-50 transition">
+                                <div class="flex gap-3">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center {{if eq .Status "approved"}}bg-green-100 text-green-600{{else if eq .Status "pending"}}bg-yellow-100 text-yellow-600{{else}}bg-gray-100 text-gray-600{{end}}">
+                                        {{if eq .Status "approved"}}✓{{else if eq .Status "pending"}}⏳{{else}}📝{{end}}
+                                    </div>
+                                    <div class="flex-1"><p class="text-sm">{{.Content}}</p><p class="text-xs text-slate-400 mt-1">{{.Date.Format "Jan 02, 2006 at 3:04 PM"}}</p></div>
+                                </div>
+                            </div>
+                            {{end}}
+                        {{else}}
+                            <div class="p-8 text-center text-slate-400">No recent activity</div>
+                        {{end}}
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div id="settings-tab" class="hidden p-6">
+                        <form hx-post="/profile/update" hx-target="#profile-update-result" hx-swap="innerHTML" class="space-y-4 max-w-md">
+                            <div><label class="block text-sm font-medium mb-1">Display Name</label><input type="text" name="username" value="{{.CurrentUser.Username}}" class="w-full border rounded-lg p-2"></div>
+                            <div><label class="block text-sm font-medium mb-1">Bike Model</label><input type="text" name="bike_model" value="{{.CurrentUser.BikeModel}}" class="w-full border rounded-lg p-2"></div>
+                            <div><label class="block text-sm font-medium mb-1">Riding Experience</label><select name="riding_exp" class="w-full border rounded-lg p-2"><option value="Beginner (0-1 year)" {{if eq .CurrentUser.RidingExp "Beginner (0-1 year)"}}selected{{end}}>Beginner (0-1 year)</option><option value="Intermediate (1-3 years)" {{if eq .CurrentUser.RidingExp "Intermediate (1-3 years)"}}selected{{end}}>Intermediate (1-3 years)</option><option value="Experienced (3-5 years)" {{if eq .CurrentUser.RidingExp "Experienced (3-5 years)"}}selected{{end}}>Experienced (3-5 years)</option><option value="Expert (5+ years)" {{if eq .CurrentUser.RidingExp "Expert (5+ years)"}}selected{{end}}>Expert (5+ years)</option></select></div>
+                            <div><label class="block text-sm font-medium mb-1">Avatar URL</label><input type="text" name="avatar_url" value="{{.CurrentUser.AvatarURL}}" placeholder="https://..." class="w-full border rounded-lg p-2"></div>
+                            <div><label class="block text-sm font-medium mb-1">Bio</label><textarea name="bio" rows="3" class="w-full border rounded-lg p-2">{{.Bio}}</textarea></div>
+                            <div><label class="block text-sm font-medium mb-1">Location</label><input type="text" name="location" value="{{.Location}}" class="w-full border rounded-lg p-2"></div>
+                            <button type="submit" class="text-white px-4 py-2 rounded-lg" style="background-color: {{.Settings.PrimaryColor}}">Save Changes</button>
+                        </form>
+                        <div id="profile-update-result" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password Modal -->
+            <div id="passwordModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" onclick="closePasswordModalOnOutside(event)">
+                <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+                    <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">🔐 Change Password</h3><button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button></div>
+                    <form id="changePasswordForm" onsubmit="changePassword(event)" class="space-y-4">
+                        <div><label class="block text-sm font-medium mb-1">Current Password</label><input type="password" id="current_password" required class="w-full border rounded-lg p-2"></div>
+                        <div><label class="block text-sm font-medium mb-1">New Password</label><input type="password" id="new_password" required class="w-full border rounded-lg p-2"><p class="text-xs text-slate-400 mt-1">Min 8 chars, with uppercase, lowercase, number & special character</p></div>
+                        <div><label class="block text-sm font-medium mb-1">Confirm New Password</label><input type="password" id="confirm_password" required class="w-full border rounded-lg p-2"></div>
+                        <button type="submit" class="w-full text-white py-2 rounded-lg" style="background-color: {{.Settings.PrimaryColor}}">Change Password</button>
+                    </form>
+                    <div id="password-result" class="mt-2"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR -->
+        <aside class="hidden lg:block w-80 p-4 sticky top-0 h-screen overflow-y-auto">
+            <div class="bg-slate-100 rounded-full px-4 py-2 flex items-center gap-2 mb-4"><span class="text-slate-400">🔍</span><form action="/search" method="GET" class="flex-1"><input type="text" name="q" placeholder="Search rides, destinations..." class="bg-transparent outline-none text-sm w-full"></form></div>
+            {{if .SidebarAds}}<div class="space-y-3 mb-4">{{range .SidebarAds}}<a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-32 object-cover rounded-xl" onerror="this.src='https://placehold.co/400x200/ffedd5/black?text=Ad'">{{else}}<div class="w-full h-32 bg-gray-200 rounded-xl flex items-center justify-center">{{.Title}}</div>{{end}}<div class="p-2 text-center text-xs text-slate-500">{{.Title}}</div></a>{{end}}</div>{{end}}
+            <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 mb-4 border border-amber-200"><h2 class="font-extrabold text-base mb-3">🏍️ Biking Trends</h2>{{range .BikingTrends}}<div class="mb-3"><div class="text-slate-500 text-xs font-bold uppercase tracking-tighter">{{.Category}}</div><div class="font-bold text-sm">{{.Title}}</div><div class="text-xs {{if eq .Trend "up"}}text-green-600{{else}}text-slate-400{{end}}">{{.Percentage}} {{if eq .Trend "up"}}↑{{else}}→{{end}}</div></div>{{end}}</div>
+            <div class="bg-gradient-to-br from-[#e85d04]/10 to-[#d00000]/10 rounded-2xl p-4 border border-[#e85d04]/30"><h2 class="font-extrabold text-base mb-3">💰 Premium Features</h2>{{if .CurrentUser}}<div class="bg-white rounded-xl p-3 mb-3 text-center"><div class="text-xs text-slate-500">Your Credits</div><div class="text-2xl font-bold" style="color: {{.Settings.PrimaryColor}}">₹{{.CurrentUser.Credits}}</div></div><div class="mb-4"><div class="text-sm font-bold mb-2">📦 Buy Credits</div><div class="space-y-2"><div class="w-full bg-white border-2 text-center font-bold py-2 rounded-xl text-sm opacity-60 cursor-not-allowed" style="border-color: {{.Settings.PrimaryColor}}; color: {{.Settings.PrimaryColor}}">500 Credits - ₹499</div><div class="w-full premium-badge text-white font-bold py-2 rounded-xl text-sm text-center opacity-60 cursor-not-allowed">1200 Credits - ₹999</div></div><p class="text-xs text-slate-400 text-center mt-2">🚧 Coming Soon</p></div><div><div class="text-sm font-bold mb-2">👑 Premium Rider</div>{{if .CurrentUser.IsPremium}}<div class="premium-badge text-white font-bold py-2 rounded-xl text-sm text-center">🏍️ ACTIVE</div>{{else}}<div class="w-full premium-badge text-white font-bold py-2 rounded-xl text-sm text-center opacity-60 cursor-not-allowed">Upgrade - ₹499/month</div>{{end}}</div>{{else}}<div class="text-center text-sm text-slate-600">Login to buy credits!</div>{{end}}</div>
+            <div class="bg-slate-50 rounded-2xl p-4 mt-4"><h2 class="font-extrabold text-base mb-3">🛡️ Ride Safe</h2><p class="text-xs text-slate-600">Always wear helmet, carry documents, and ride responsibly. Highway Cruizzers connects riders - verify before riding together.</p></div>
+            {{if .FeaturedAds}}{{range .FeaturedAds}}<div class="mt-4"><a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-40 object-cover rounded-2xl" onerror="this.src='https://placehold.co/400x200/ffedd5/black?text=Sponsored'">{{else}}<div class="w-full h-40 bg-gray-200 rounded-2xl flex items-center justify-center">{{.Title}}</div>{{end}}<div class="text-center text-xs text-slate-400 mt-1">Sponsored</div></a></div>{{end}}{{end}}
+        </aside>
+    </div>
+
+    <div class="text-center py-4 border-t border-slate-100 bg-white w-full"><p class="text-xs text-slate-400">Made in India 🇮🇳 with ❤️ by <a href="https://kanams.ai" target="_blank" class="hover:underline font-medium" style="color: {{.Settings.PrimaryColor}}">kanams.ai</a> | Ride Free, Ride Safe 🏍️</p></div>
+
+    <script>
+        let currentJoinRideId = null;
+
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full'); sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden'); document.body.classList.add('mobile-menu-open');
+            } else { closeMobileMenu(); }
+        }
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.add('-translate-x-full'); sidebar.classList.remove('translate-x-0');
+            overlay.classList.add('hidden'); document.body.classList.remove('mobile-menu-open');
+        }
+        window.addEventListener('resize', function() { if (window.innerWidth >= 1024) closeMobileMenu(); });
+
+        function showTab(tabName) {
+            document.getElementById('rides-tab').classList.add('hidden');
+            document.getElementById('activity-tab').classList.add('hidden');
+            document.getElementById('settings-tab').classList.add('hidden');
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            const btns = ['rides', 'activity', 'settings'];
+            btns.forEach(btn => {
+                const el = document.getElementById('tab-' + btn + '-btn');
+                if (el) { el.classList.remove('tab-active'); el.classList.add('tab-inactive'); }
+            });
+            const activeBtn = document.getElementById('tab-' + tabName + '-btn');
+            if (activeBtn) { activeBtn.classList.add('tab-active'); activeBtn.classList.remove('tab-inactive'); }
+        }
+
+        function showChangePassword() { document.getElementById('passwordModal').classList.remove('hidden'); document.getElementById('passwordModal').classList.add('flex'); }
+        function closePasswordModal() { document.getElementById('passwordModal').classList.add('hidden'); document.getElementById('passwordModal').classList.remove('flex'); }
+        function closePasswordModalOnOutside(event) { if (event.target === document.getElementById('passwordModal')) closePasswordModal(); }
+
+        function changePassword(event) {
+            event.preventDefault();
+            const currentPassword = document.getElementById('current_password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            if (newPassword !== confirmPassword) { document.getElementById('password-result').innerHTML = '<div class="p-2 bg-red-100 text-red-700 rounded text-sm">New passwords do not match!</div>'; return; }
+            if (newPassword.length < 8) { document.getElementById('password-result').innerHTML = '<div class="p-2 bg-red-100 text-red-700 rounded text-sm">Password must be at least 8 characters!</div>'; return; }
+            const hasUpper = /[A-Z]/.test(newPassword), hasLower = /[a-z]/.test(newPassword), hasNumber = /[0-9]/.test(newPassword), hasSpecial = /[!@#$%^&*]/.test(newPassword);
+            if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) { document.getElementById('password-result').innerHTML = '<div class="p-2 bg-red-100 text-red-700 rounded text-sm">Password must contain uppercase, lowercase, number, and special character!</div>'; return; }
+            fetch('/change-password', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ current_password: currentPassword, new_password: newPassword }) })
+                .then(res => res.text()).then(data => { document.getElementById('password-result').innerHTML = data; if (data.includes('✅')) { setTimeout(() => { window.location.href = "/logout"; }, 2000); } })
+                .catch(err => { document.getElementById('password-result').innerHTML = '<div class="p-2 bg-red-100 text-red-700 rounded text-sm">Error changing password</div>'; });
+        }
+
+        function showLoginPrompt() { alert("🔑 Please login or sign up to join the biker community!"); }
+        function switchAuthTab(n) {
+            const loginDiv = document.getElementById('auth-login'), signupDiv = document.getElementById('auth-signup');
+            const loginTab = document.getElementById('tab-login'), signupTab = document.getElementById('tab-signup');
+            if (n === 0) { loginDiv.classList.remove('hidden'); signupDiv.classList.add('hidden'); loginTab.classList.add('border-b-2'); signupTab.classList.remove('border-b-2'); }
+            else { loginDiv.classList.add('hidden'); signupDiv.classList.remove('hidden'); signupTab.classList.add('border-b-2'); loginTab.classList.remove('border-b-2'); }
+        }
+        function attachMedia() { const url = prompt("📸 Paste your image URL:"); if(url) document.querySelector('input[name="image_url"]').value = url; }
+        function addPoll() { alert("📊 Poll feature coming soon!"); }
+        function insertEmoji() { const t = document.querySelector('textarea[name="content"]'); if(t) t.value += " 🏍️ "; t?.focus(); }
+        function toggleFollow(btn) { if (btn.textContent.includes('Follow')) { btn.innerHTML = 'Following ✓'; btn.classList.add('!bg-emerald-600'); } else { btn.textContent = 'Follow'; btn.classList.remove('!bg-emerald-600'); } }
+    </script>
+</body>
+</html>
