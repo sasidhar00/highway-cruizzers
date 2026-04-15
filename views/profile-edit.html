@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Edit Profile - {{.Settings.SiteName}}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .sidebar-item:active { background-color: #f1f5f9; }
+        .highway-brand { font-weight: 900; letter-spacing: -2.5px; text-transform: lowercase; }
+        .logo-img { max-height: 50px; width: auto; object-fit: contain; }
+        @media (max-width: 768px) { button, a, .sidebar-item, [onclick] { cursor: pointer; min-height: 44px; } input, textarea, select { font-size: 16px !important; } }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="closeMobileMenu()"></div>
+    
+    <div class="flex flex-col lg:flex-row max-w-7xl mx-auto min-h-screen relative">
+        
+        <!-- LEFT SIDEBAR -->
+        <header id="sidebar" class="fixed top-0 left-0 w-4/5 max-w-[280px] h-full p-4 border-r border-slate-100 flex flex-col justify-between z-50 bg-white transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:w-64 shadow-xl lg:shadow-none overflow-y-auto">
+            <div>
+                <div class="p-3 mb-4 flex justify-between items-center">
+                    <div>
+                        {{if and .Settings .Settings.LogoURL}}
+                        <img src="{{.Settings.LogoURL}}" alt="{{.Settings.SiteName}}" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                        <h1 class="highway-brand text-2xl" style="color: {{.Settings.PrimaryColor}}; display: none;">{{.Settings.SiteName}}</h1>
+                        {{else}}
+                        <h1 class="highway-brand text-2xl" style="color: #e85d04">{{.Settings.SiteName}}</h1>
+                        {{end}}
+                        <p class="text-[10px] text-slate-400 mt-0.5">by kanams.ai 🏍️</p>
+                    </div>
+                    <button onclick="closeMobileMenu()" class="lg:hidden text-slate-500 text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100">&times;</button>
+                </div>
+                
+                <nav class="space-y-1">
+                    <a href="/" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🏠 Home</a>
+                    <a href="/marketplace" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🛍️ Marketplace</a>
+                    <a href="/search" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🔍 Find Rides</a>
+                    <a href="/news" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">📰 Biking News</a>
+                    <a href="/profile" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">👤 My Profile</a>
+                    {{if .IsAdmin}}<a href="/admin" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium text-amber-600">👑 Admin Dashboard</a>{{end}}
+                </nav>
+                <button onclick="{{if .CurrentUser}}document.querySelector('textarea[name=content]')?.focus(){{else}}showLoginPrompt(){{end}}; closeMobileMenu()" class="w-full text-white font-bold py-3 rounded-full mt-6 shadow-md transition active:scale-95" style="background-color: {{.Settings.PrimaryColor}}">Post Ride</button>
+            </div>
+
+            <div id="sidebar-bottom" class="mt-4">
+                {{if .CurrentUser}}
+                <div class="flex items-center gap-3 p-3 hover:bg-slate-100 rounded-xl cursor-pointer transition">
+                    {{if .CurrentUser.AvatarURL}}<img src="{{.CurrentUser.AvatarURL}}" class="w-10 h-10 rounded-2xl object-cover flex-shrink-0">{{else}}<div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}})">🏍️</div>{{end}}
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-sm truncate">{{.CurrentUser.Username}}</div>
+                        <div class="text-slate-500 text-xs truncate">@{{.CurrentUser.Handle}}</div>
+                        <div class="text-amber-600 text-xs font-medium">₹{{.CurrentUser.Credits}} credits</div>
+                        {{if .CurrentUser.IsPremium}}<div class="text-xs font-bold text-amber-600">🏍️ PREMIUM RIDER</div>{{end}}
+                    </div>
+                    <button hx-post="/logout" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="text-xs font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded-lg">Logout</button>
+                </div>
+                {{else}}
+                <div class="p-4 border-t border-slate-100">
+                    <div class="flex border-b mb-4">
+                        <button onclick="switchAuthTab(0)" id="tab-login" class="flex-1 font-bold text-sm pb-2 border-b-2" style="border-color: {{.Settings.PrimaryColor}}; color: {{.Settings.PrimaryColor}}">Login</button>
+                        <button onclick="switchAuthTab(1)" id="tab-signup" class="flex-1 font-bold text-sm pb-2 text-slate-400">Join Ride</button>
+                    </div>
+                    <div id="auth-login">
+                        <form hx-post="/login" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
+                            <input type="email" name="email" placeholder="Email" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="password" name="password" placeholder="Password" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <button type="submit" class="w-full text-white font-bold py-3 rounded-xl transition text-sm" style="background-color: {{.Settings.PrimaryColor}}">Login</button>
+                        </form>
+                        <div class="text-center mt-3"><a href="/forgot-password" class="text-xs hover:underline" style="color: {{.Settings.PrimaryColor}}">Forgot password?</a></div>
+                    </div>
+                    <div id="auth-signup" class="hidden">
+                        <form hx-post="/signup" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
+                            <input type="text" name="username" placeholder="Full Name" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="text" name="handle" placeholder="Handle (no @)" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="email" name="email" placeholder="Email" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="tel" name="phone" placeholder="Mobile Number" required pattern="[0-9]{10}" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="text" name="bike_model" placeholder="Your Bike Model" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <select name="riding_exp" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                                <option value="">Riding Experience</option>
+                                <option value="Beginner (0-1 year)">Beginner (0-1 year)</option>
+                                <option value="Intermediate (1-3 years)">Intermediate (1-3 years)</option>
+                                <option value="Experienced (3-5 years)">Experienced (3-5 years)</option>
+                                <option value="Expert (5+ years)">Expert (5+ years)</option>
+                            </select>
+                            <input type="password" name="password" placeholder="Password (min 6 chars)" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition text-sm">Join the Cruizzers</button>
+                        </form>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </header>
+
+        <button onclick="toggleMobileMenu()" class="lg:hidden fixed bottom-4 left-4 z-30 text-white p-3 rounded-full shadow-lg active:scale-95 transition" style="background-color: {{.Settings.PrimaryColor}}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+
+        <!-- MAIN CONTENT - EDIT PROFILE -->
+        <main class="flex-1 w-full min-w-0 pb-20 lg:pb-0">
+            <div class="max-w-2xl mx-auto p-6">
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-{{.Settings.PrimaryColor}} to-{{.Settings.SecondaryColor}} h-24"></div>
+                    
+                    <div class="px-6 pb-6 relative">
+                        <!-- Avatar -->
+                        <div class="flex justify-center -mt-12 mb-4">
+                            <div class="relative">
+                                {{if .CurrentUser.AvatarURL}}
+                                <img src="{{.CurrentUser.AvatarURL}}" class="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover">
+                                {{else}}
+                                <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-{{.Settings.PrimaryColor}} to-{{.Settings.SecondaryColor}} flex items-center justify-center text-white text-3xl font-bold">
+                                    {{if .CurrentUser.Username}}{{slice .CurrentUser.Username 0 1}}{{else}}U{{end}}
+                                </div>
+                                {{end}}
+                            </div>
+                        </div>
+                        
+                        <h1 class="text-2xl font-bold text-center mb-2">Edit Profile</h1>
+                        <p class="text-center text-gray-500 text-sm mb-6">Update your personal information</p>
+                        
+                        <form hx-post="/profile/update" hx-target="#update-result" hx-swap="innerHTML" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                                <input type="text" name="username" value="{{.CurrentUser.Username}}" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-{{.Settings.PrimaryColor}} outline-none">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Handle</label>
+                                <input type="text" value="@{{.CurrentUser.Handle}}" disabled class="w-full bg-gray-100 border rounded-lg p-2 text-gray-500">
+                                <p class="text-xs text-gray-400 mt-1">Handle cannot be changed</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" value="{{.CurrentUser.Email}}" disabled class="w-full bg-gray-100 border rounded-lg p-2 text-gray-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                <input type="tel" value="{{.CurrentUser.Phone}}" disabled class="w-full bg-gray-100 border rounded-lg p-2 text-gray-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Bike Model</label>
+                                <input type="text" name="bike_model" value="{{.CurrentUser.BikeModel}}" placeholder="e.g., Royal Enfield Classic 350" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-{{.Settings.PrimaryColor}} outline-none">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Riding Experience</label>
+                                <select name="riding_exp" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-{{.Settings.PrimaryColor}} outline-none">
+                                    <option value="Beginner (0-1 year)" {{if eq .CurrentUser.RidingExp "Beginner (0-1 year)"}}selected{{end}}>Beginner (0-1 year)</option>
+                                    <option value="Intermediate (1-3 years)" {{if eq .CurrentUser.RidingExp "Intermediate (1-3 years)"}}selected{{end}}>Intermediate (1-3 years)</option>
+                                    <option value="Experienced (3-5 years)" {{if eq .CurrentUser.RidingExp "Experienced (3-5 years)"}}selected{{end}}>Experienced (3-5 years)</option>
+                                    <option value="Expert (5+ years)" {{if eq .CurrentUser.RidingExp "Expert (5+ years)"}}selected{{end}}>Expert (5+ years)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Avatar URL</label>
+                                <input type="text" name="avatar_url" value="{{.CurrentUser.AvatarURL}}" placeholder="https://..." class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-{{.Settings.PrimaryColor}} outline-none">
+                                <p class="text-xs text-gray-400 mt-1">Paste a direct image URL for your profile picture</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                                <textarea name="bio" rows="3" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-{{.Settings.PrimaryColor}} outline-none" placeholder="Tell other riders about yourself...">{{.Bio}}</textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                <input type="text" name="location" value="{{.Location}}" placeholder="City, State" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-{{.Settings.PrimaryColor}} outline-none">
+                            </div>
+                            
+                            <button type="submit" class="w-full text-white font-semibold py-2 rounded-lg transition" style="background-color: {{.Settings.PrimaryColor}}">Save Changes</button>
+                        </form>
+                        
+                        <div id="update-result" class="mt-4"></div>
+                        
+                        <div class="text-center mt-6">
+                            <a href="/profile" class="text-sm hover:underline" style="color: {{.Settings.PrimaryColor}}">← Back to Profile</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR -->
+        <aside class="hidden lg:block w-80 p-4 sticky top-0 h-screen overflow-y-auto">
+            <div class="bg-slate-100 rounded-full px-4 py-2 flex items-center gap-2 mb-4"><span class="text-slate-400">🔍</span><form action="/search" method="GET" class="flex-1"><input type="text" name="q" placeholder="Search..." class="bg-transparent outline-none text-sm w-full"></form></div>
+            
+            {{if .SidebarAds}}<div class="space-y-3 mb-4">{{range .SidebarAds}}<a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-32 object-cover rounded-xl">{{else}}<div class="w-full h-32 bg-gray-200 rounded-xl flex items-center justify-center">{{.Title}}</div>{{end}}</a>{{end}}</div>{{end}}
+            
+            <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 mb-4"><h2 class="font-extrabold text-base mb-3">🏍️ Biking Tips</h2>
+                <ul class="text-xs space-y-2 text-amber-800">
+                    <li>✓ Always wear a DOT certified helmet</li>
+                    <li>✓ Check tire pressure before every ride</li>
+                    <li>✓ Carry basic tool kit and first aid</li>
+                    <li>✓ Stay hydrated during long rides</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <div class="text-center py-4 border-t border-slate-100 bg-white w-full"><p class="text-xs text-slate-400">Made in India 🇮🇳 with ❤️ by <a href="https://kanams.ai" target="_blank" class="hover:underline font-medium" style="color: {{.Settings.PrimaryColor}}">kanams.ai</a></p></div>
+
+    <script>
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full'); sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden'); document.body.classList.add('mobile-menu-open');
+            } else { closeMobileMenu(); }
+        }
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.add('-translate-x-full'); sidebar.classList.remove('translate-x-0');
+            overlay.classList.add('hidden'); document.body.classList.remove('mobile-menu-open');
+        }
+        window.addEventListener('resize', function() { if (window.innerWidth >= 1024) closeMobileMenu(); });
+        function showLoginPrompt() { alert("🔑 Please login to continue"); }
+        function switchAuthTab(n) {
+            const loginDiv = document.getElementById('auth-login'), signupDiv = document.getElementById('auth-signup');
+            const loginTab = document.getElementById('tab-login'), signupTab = document.getElementById('tab-signup');
+            if (n === 0) { loginDiv.classList.remove('hidden'); signupDiv.classList.add('hidden'); loginTab.classList.add('border-b-2'); signupTab.classList.remove('border-b-2'); }
+            else { loginDiv.classList.add('hidden'); signupDiv.classList.remove('hidden'); signupTab.classList.add('border-b-2'); loginTab.classList.remove('border-b-2'); }
+        }
+    </script>
+</body>
+</html>
