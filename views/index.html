@@ -7,81 +7,20 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-            background-color: #fff;
-        }
-        
-        .sidebar-item:active { 
-            background-color: #f1f5f9; 
-        }
-        
-        .highway-brand { 
-            font-weight: 900; 
-            letter-spacing: -2.5px; 
-            text-transform: lowercase;
-        }
-        
-        .boosted { 
-            border-left: 4px solid #f59e0b; 
-            background: linear-gradient(to right, #fffbeb, #ffffff);
-        }
-        
-        .featured {
-            border-left: 4px solid {{.Settings.PrimaryColor}};
-            background: linear-gradient(to right, #fff5eb, #ffffff);
-        }
-        
-        .premium-badge {
-            background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}});
-        }
-        
-        .mobile-menu-open {
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-        }
-        
-        .ad-container {
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            border-radius: 1rem;
-            overflow: hidden;
-            transition: transform 0.3s ease;
-        }
-        
-        .ad-container:hover {
-            transform: translateY(-2px);
-        }
-        
-        @media (max-width: 768px) {
-            button, a, .sidebar-item, [onclick] {
-                cursor: pointer;
-                min-height: 44px;
-            }
-            input, textarea, select {
-                font-size: 16px !important;
-            }
-        }
-        
-        img {
-            max-width: 100%;
-            height: auto;
-        }
-        
-        .break-word {
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-        
-        .logo-img {
-            max-height: 50px;
-            width: auto;
-            object-fit: contain;
-        }
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; background-color: #fff; }
+        .sidebar-item:active { background-color: #f1f5f9; }
+        .highway-brand { font-weight: 900; letter-spacing: -2.5px; text-transform: lowercase; }
+        .boosted { border-left: 4px solid #f59e0b; background: linear-gradient(to right, #fffbeb, #ffffff); }
+        .featured { border-left: 4px solid {{.Settings.PrimaryColor}}; background: linear-gradient(to right, #fff5eb, #ffffff); }
+        .premium-badge { background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}}); }
+        .mobile-menu-open { overflow: hidden; position: fixed; width: 100%; }
+        .ad-container { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 1rem; overflow: hidden; transition: transform 0.3s ease; }
+        .ad-container:hover { transform: translateY(-2px); }
+        @media (max-width: 768px) { button, a, .sidebar-item, [onclick] { cursor: pointer; min-height: 44px; } input, textarea, select { font-size: 16px !important; } }
+        img { max-width: 100%; height: auto; }
+        .break-word { word-break: break-word; overflow-wrap: break-word; }
+        .logo-img { max-height: 50px; width: auto; object-fit: contain; }
     </style>
 </head>
 <body class="bg-white text-slate-900">
@@ -106,56 +45,29 @@
                 </div>
                 
                 <nav class="space-y-1">
-                    <a href="/" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">
-                        <span>🏠</span> Home
-                    </a>
-                    <a href="/marketplace" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">
-                        <span>🛍️</span> Marketplace
-                    </a>
-                    <a href="/search" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">
-                        <span>🔍</span> Find Rides
-                    </a>
-                    <a href="/news" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">
-                        <span>📰</span> Biking News
-                    </a>
-                    <a href="/profile" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">
-                        <span>👤</span> My Profile
-                    </a>
-                    {{if .IsAdmin}}
-                    <a href="/admin" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium text-amber-600">
-                        <span>👑</span> Admin Dashboard
-                    </a>
-                    {{end}}
+                    <a href="/" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🏠 Home</a>
+                    <a href="/experiences" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🚐 Travel Experiences</a>
+                    <a href="/marketplace" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🛍️ Marketplace</a>
+                    <a href="/search" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🔍 Find Rides</a>
+                    <a href="/news" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">📰 Biking News</a>
+                    <a href="/profile" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">👤 My Profile</a>
+                    {{if .IsAdmin}}<a href="/admin" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium text-amber-600">👑 Admin Dashboard</a>{{end}}
                 </nav>
-                <button onclick="{{if .CurrentUser}}document.querySelector('textarea[name=content]')?.focus(){{else}}showLoginPrompt(){{end}}; closeMobileMenu()" 
-                        class="w-full text-white font-bold py-3 rounded-full mt-6 shadow-md transition active:scale-95" style="background-color: {{.Settings.PrimaryColor}}">
-                    Post Ride
-                </button>
+                <button onclick="{{if .CurrentUser}}document.querySelector('textarea[name=content]')?.focus(){{else}}showLoginPrompt(){{end}}; closeMobileMenu()" class="w-full text-white font-bold py-3 rounded-full mt-6 shadow-md transition active:scale-95" style="background-color: {{.Settings.PrimaryColor}}">Post Ride</button>
             </div>
 
             <div id="sidebar-bottom" class="mt-4">
                 {{if .CurrentUser}}
                 <div class="flex items-center gap-3 p-3 hover:bg-slate-100 rounded-xl cursor-pointer transition">
-                    {{if .CurrentUser.AvatarURL}}
-                    <img src="{{.CurrentUser.AvatarURL}}" class="w-10 h-10 rounded-2xl object-cover flex-shrink-0">
-                    {{else}}
-                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}})">🏍️</div>
-                    {{end}}
+                    {{if .CurrentUser.AvatarURL}}<img src="{{.CurrentUser.AvatarURL}}" class="w-10 h-10 rounded-2xl object-cover flex-shrink-0">{{else}}<div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}})">🏍️</div>{{end}}
                     <div class="flex-1 min-w-0">
                         <div class="font-bold text-sm truncate">{{.CurrentUser.Username}}</div>
                         <div class="text-slate-500 text-xs truncate">@{{.CurrentUser.Handle}}</div>
                         <div class="text-amber-600 text-xs font-medium">₹{{.CurrentUser.Credits}} credits</div>
-                        {{if .CurrentUser.IsPremium}}
-                        <div class="text-xs font-bold text-amber-600">🏍️ PREMIUM RIDER</div>
-                        {{end}}
-                        {{if .CurrentUser.BikeModel}}
-                        <div class="text-xs text-slate-500">{{.CurrentUser.BikeModel}}</div>
-                        {{end}}
+                        {{if .CurrentUser.IsPremium}}<div class="text-xs font-bold text-amber-600">🏍️ PREMIUM RIDER</div>{{end}}
+                        {{if .CurrentUser.BikeModel}}<div class="text-xs text-slate-500">{{.CurrentUser.BikeModel}}</div>{{end}}
                     </div>
-                    <button hx-post="/logout" hx-target="#sidebar-bottom" hx-swap="innerHTML" 
-                            class="text-xs font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded-lg">
-                        Logout
-                    </button>
+                    <button hx-post="/logout" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="text-xs font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded-lg">Logout</button>
                 </div>
                 {{else}}
                 <div class="p-4 border-t border-slate-100">
@@ -163,18 +75,14 @@
                         <button onclick="switchAuthTab(0)" id="tab-login" class="flex-1 font-bold text-sm pb-2 border-b-2" style="border-color: {{.Settings.PrimaryColor}}; color: {{.Settings.PrimaryColor}}">Login</button>
                         <button onclick="switchAuthTab(1)" id="tab-signup" class="flex-1 font-bold text-sm pb-2 text-slate-400">Join Ride</button>
                     </div>
-
                     <div id="auth-login">
                         <form hx-post="/login" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
                             <input type="email" name="email" placeholder="Email" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
                             <input type="password" name="password" placeholder="Password" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
                             <button type="submit" class="w-full text-white font-bold py-3 rounded-xl transition text-sm" style="background-color: {{.Settings.PrimaryColor}}">Login</button>
                         </form>
-                        <div class="text-center mt-3">
-                            <a href="/forgot-password" class="text-xs hover:underline" style="color: {{.Settings.PrimaryColor}}">Forgot password?</a>
-                        </div>
+                        <div class="text-center mt-3"><a href="/forgot-password" class="text-xs hover:underline" style="color: {{.Settings.PrimaryColor}}">Forgot password?</a></div>
                     </div>
-
                     <div id="auth-signup" class="hidden">
                         <form hx-post="/signup" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
                             <input type="text" name="username" placeholder="Full Name" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
@@ -208,28 +116,13 @@
                 <button onclick="toggleMobileMenu()" class="lg:hidden text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
-                <span class="flex-1 truncate">
-                    {{if .IsProfile}}My Rides
-                    {{else if .SearchQuery}}Search Results: {{.SearchQuery}}
-                    {{else}}Rider's Hub{{end}}
-                </span>
+                <span class="flex-1 truncate">{{if .IsProfile}}My Rides{{else if .SearchQuery}}Search Results: {{.SearchQuery}}{{else}}Rider's Hub{{end}}</span>
             </div>
 
             <!-- Banner Ads -->
             {{if .BannerAds}}
             <div class="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b overflow-x-auto">
-                <div class="flex gap-4">
-                    {{range .BannerAds}}
-                    <a href="/ad/click/{{.ID}}" target="_blank" class="ad-container flex-shrink-0 w-80">
-                        {{if .ImageURL}}
-                        <img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-24 object-cover" onerror="this.src='https://placehold.co/800x200/ffedd5/black?text=Advertisement'">
-                        {{else}}
-                        <div class="w-full h-24 bg-gray-200 flex items-center justify-center">{{.Title}}</div>
-                        {{end}}
-                        <div class="p-2 text-center text-xs text-slate-500">{{.Title}}</div>
-                    </a>
-                    {{end}}
-                </div>
+                <div class="flex gap-4">{{range .BannerAds}}<a href="/ad/click/{{.ID}}" target="_blank" class="ad-container flex-shrink-0 w-80">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-24 object-cover" onerror="this.src='https://placehold.co/800x200/ffedd5/black?text=Advertisement'">{{else}}<div class="w-full h-24 bg-gray-200 flex items-center justify-center">{{.Title}}</div>{{end}}<div class="p-2 text-center text-xs text-slate-500">{{.Title}}</div></a>{{end}}</div>
             </div>
             {{end}}
 
@@ -238,11 +131,7 @@
                 {{if .CurrentUser}}
                 <form hx-post="/post" hx-target="#feed" hx-swap="afterbegin" hx-on::after-request="this.reset()">
                     <div class="flex gap-3">
-                        {{if .CurrentUser.AvatarURL}}
-                        <img src="{{.CurrentUser.AvatarURL}}" class="w-10 h-10 rounded-2xl object-cover flex-shrink-0">
-                        {{else}}
-                        <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}})">🏍️</div>
-                        {{end}}
+                        {{if .CurrentUser.AvatarURL}}<img src="{{.CurrentUser.AvatarURL}}" class="w-10 h-10 rounded-2xl object-cover flex-shrink-0">{{else}}<div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}})">🏍️</div>{{end}}
                         <div class="flex-1 min-w-0">
                             <div class="flex gap-4 mb-3 flex-wrap">
                                 <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="category" value="Ride Buddy" checked class="accent-[#e85d04] w-4 h-4"><span class="text-xs font-medium text-slate-600">🏍️ Ride Buddy</span></label>
@@ -253,34 +142,13 @@
                             <textarea name="content" class="w-full text-base placeholder-slate-400 outline-none resize-none break-word" placeholder="What ride are you planning? Looking for riding buddies? Rent your bike?" rows="2" required></textarea>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
-                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100">
-                                    <span class="text-base">📍</span>
-                                    <input type="text" name="from_location" placeholder="From (City)" class="bg-transparent text-sm w-full outline-none">
-                                </div>
-                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100">
-                                    <span class="text-base">🏁</span>
-                                    <input type="text" name="to_location" placeholder="To (City)" class="bg-transparent text-sm w-full outline-none">
-                                </div>
-                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100">
-                                    <span class="text-base">📅</span>
-                                    <input type="date" name="departure_date" class="bg-transparent text-sm w-full outline-none">
-                                </div>
-                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100">
-                                    <span class="text-base">🔧</span>
-                                    <input type="text" name="bike_model" placeholder="Bike Model" class="bg-transparent text-sm w-full outline-none">
-                                </div>
-                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100">
-                                    <span class="text-base">💺</span>
-                                    <input type="number" name="seats" placeholder="Seats Available" class="bg-transparent text-sm w-full outline-none">
-                                </div>
-                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100">
-                                    <span class="text-base">💰</span>
-                                    <input type="text" name="price" placeholder="Price / Share" class="bg-transparent text-sm w-full outline-none">
-                                </div>
-                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100 col-span-1 md:col-span-2">
-                                    <span class="text-base">🖼️</span>
-                                    <input type="text" name="image_url" placeholder="Image URL (bike, route map)..." class="bg-transparent text-sm w-full outline-none">
-                                </div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100"><span class="text-base">📍</span><input type="text" name="from_location" placeholder="From (City)" class="bg-transparent text-sm w-full outline-none"></div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100"><span class="text-base">🏁</span><input type="text" name="to_location" placeholder="To (City)" class="bg-transparent text-sm w-full outline-none"></div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100"><span class="text-base">📅</span><input type="date" name="departure_date" class="bg-transparent text-sm w-full outline-none"></div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100"><span class="text-base">🔧</span><input type="text" name="bike_model" placeholder="Bike Model" class="bg-transparent text-sm w-full outline-none"></div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100"><span class="text-base">💺</span><input type="number" name="seats" placeholder="Seats Available" class="bg-transparent text-sm w-full outline-none"></div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100"><span class="text-base">💰</span><input type="text" name="price" placeholder="Price / Share" class="bg-transparent text-sm w-full outline-none"></div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl flex items-center gap-2 border border-slate-100 col-span-1 md:col-span-2"><span class="text-base">🖼️</span><input type="text" name="image_url" placeholder="Image URL (bike, route map)..." class="bg-transparent text-sm w-full outline-none"></div>
                             </div>
 
                             <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-100">
@@ -349,33 +217,14 @@
                             {{end}}
 
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 gap-3">
-                                <div class="font-bold text-base tracking-tight" style="color: {{$.Settings.PrimaryColor}}">
-                                    {{.Price}}
-                                </div>
+                                <div class="font-bold text-base tracking-tight" style="color: {{$.Settings.PrimaryColor}}">{{.Price}}</div>
 
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <button hx-post="/like/{{.ID}}" hx-swap="outerHTML" 
-                                            class="flex items-center gap-1.5 text-slate-500 hover:text-red-500 transition px-3 py-1.5 rounded-full bg-slate-50 active:bg-slate-100">
-                                        ❤️ <span class="text-xs font-medium">{{.Likes}}</span>
-                                    </button>
-
-                                    {{if $.CurrentUser}}
-                                    <button onclick="boostRide({{.ID}})" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">🚀 Boost</button>
-                                    <button onclick="featureRide({{.ID}})" class="flex items-center gap-1.5 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95" style="background-color: {{$.Settings.PrimaryColor}}">🔥 Feature</button>
-                                    {{end}}
-
-                                    {{if or (eq .Category "Ride Buddy") (eq .Category "Trip")}}
-                                    <button onclick="openJoinModal({{.ID}})" class="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">🤝 Join Ride</button>
-                                    {{end}}
-
-                                    {{if eq .Category "Rental"}}
-                                    <button onclick="openRentModal({{.ID}})" class="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">🔑 Rent Now</button>
-                                    {{end}}
-
-                                    {{if eq .Category "Service"}}
-                                    <button onclick="openServiceModal({{.ID}})" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">📞 Book Service</button>
-                                    {{end}}
-
+                                    <button hx-post="/like/{{.ID}}" hx-swap="outerHTML" class="flex items-center gap-1.5 text-slate-500 hover:text-red-500 transition px-3 py-1.5 rounded-full bg-slate-50 active:bg-slate-100">❤️ <span class="text-xs font-medium">{{.Likes}}</span></button>
+                                    {{if $.CurrentUser}}<button onclick="boostRide({{.ID}})" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">🚀 Boost</button><button onclick="featureRide({{.ID}})" class="flex items-center gap-1.5 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95" style="background-color: {{$.Settings.PrimaryColor}}">🔥 Feature</button>{{end}}
+                                    {{if or (eq .Category "Ride Buddy") (eq .Category "Trip")}}<button onclick="openJoinModal({{.ID}})" class="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">🤝 Join Ride</button>{{end}}
+                                    {{if eq .Category "Rental"}}<button onclick="openRentModal({{.ID}})" class="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">🔑 Rent Now</button>{{end}}
+                                    {{if eq .Category "Service"}}<button onclick="openServiceModal({{.ID}})" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">📞 Book Service</button>{{end}}
                                     <a href="https://wa.me/919999999999?text=Interested%20in%20ride%20ID%20{{.ID}}" target="_blank" class="flex items-center gap-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white text-xs font-semibold px-3 py-1.5 rounded-full transition active:scale-95">📲 WhatsApp</a>
                                 </div>
                             </div>
@@ -383,270 +232,68 @@
                     </div>
                 </div>
                 {{else}}
-                <div class="p-8 text-center text-slate-400 text-sm">
-                    <div class="text-4xl mb-2">🏍️</div>
-                    No rides posted yet. Be the first to plan a ride!
-                </div>
+                <div class="p-8 text-center text-slate-400 text-sm"><div class="text-4xl mb-2">🏍️</div>No rides posted yet. Be the first to plan a ride!</div>
                 {{end}}
             </div>
         </main>
 
         <!-- RIGHT SIDEBAR -->
         <aside class="hidden lg:block w-80 p-4 sticky top-0 h-screen overflow-y-auto">
-            <div class="bg-slate-100 rounded-full px-4 py-2 flex items-center gap-2 mb-4">
-                <span class="text-slate-400">🔍</span>
-                <form action="/search" method="GET" class="flex-1">
-                    <input type="text" name="q" placeholder="Search rides, destinations..." class="bg-transparent outline-none text-sm w-full">
-                </form>
-            </div>
+            <div class="bg-slate-100 rounded-full px-4 py-2 flex items-center gap-2 mb-4"><span class="text-slate-400">🔍</span><form action="/search" method="GET" class="flex-1"><input type="text" name="q" placeholder="Search rides, destinations..." class="bg-transparent outline-none text-sm w-full"></form></div>
             
-            <!-- Sidebar Advertisements -->
-            {{if .SidebarAds}}
-            <div class="space-y-3 mb-4">
-                {{range .SidebarAds}}
-                <a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">
-                    {{if .ImageURL}}
-                    <img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-32 object-cover rounded-xl" onerror="this.src='https://placehold.co/400x200/ffedd5/black?text=Ad'">
-                    {{else}}
-                    <div class="w-full h-32 bg-gray-200 rounded-xl flex items-center justify-center">{{.Title}}</div>
-                    {{end}}
-                    <div class="p-2 text-center text-xs text-slate-500">{{.Title}}</div>
-                </a>
-                {{end}}
-            </div>
-            {{end}}
+            {{if .SidebarAds}}<div class="space-y-3 mb-4">{{range .SidebarAds}}<a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-32 object-cover rounded-xl" onerror="this.src='https://placehold.co/400x200/ffedd5/black?text=Ad'">{{else}}<div class="w-full h-32 bg-gray-200 rounded-xl flex items-center justify-center">{{.Title}}</div>{{end}}<div class="p-2 text-center text-xs text-slate-500">{{.Title}}</div></a>{{end}}</div>{{end}}
             
-            <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 mb-4 border border-amber-200">
-                <h2 class="font-extrabold text-base mb-3">🏍️ Biking Trends</h2>
-                {{range .BikingTrends}}
-                <div class="mb-3">
-                    <div class="text-slate-500 text-xs font-bold uppercase tracking-tighter">{{.Category}}</div>
-                    <div class="font-bold text-sm">{{.Title}}</div>
-                    <div class="text-xs {{if eq .Trend "up"}}text-green-600{{else}}text-slate-400{{end}}">{{.Percentage}} {{if eq .Trend "up"}}↑{{else}}→{{end}}</div>
-                </div>
-                {{end}}
-            </div>
+            <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 mb-4 border border-amber-200"><h2 class="font-extrabold text-base mb-3">🏍️ Biking Trends</h2>{{range .BikingTrends}}<div class="mb-3"><div class="text-slate-500 text-xs font-bold uppercase tracking-tighter">{{.Category}}</div><div class="font-bold text-sm">{{.Title}}</div><div class="text-xs {{if eq .Trend "up"}}text-green-600{{else}}text-slate-400{{end}}">{{.Percentage}} {{if eq .Trend "up"}}↑{{else}}→{{end}}</div></div>{{end}}</div>
 
-            <div class="bg-gradient-to-br from-[#e85d04]/10 to-[#d00000]/10 rounded-2xl p-4 border border-[#e85d04]/30">
-                <h2 class="font-extrabold text-base mb-3">💰 Premium Features</h2>
-                {{if .CurrentUser}}
-                <div class="bg-white rounded-xl p-3 mb-3 text-center">
-                    <div class="text-xs text-slate-500">Your Credits</div>
-                    <div class="text-2xl font-bold" style="color: {{.Settings.PrimaryColor}}">₹{{.CurrentUser.Credits}}</div>
-                </div>
-                <div class="mb-4">
-                    <div class="text-sm font-bold mb-2">📦 Buy Credits</div>
-                    <div class="space-y-2">
-                        <div class="w-full bg-white border-2 text-center font-bold py-2 rounded-xl text-sm opacity-60 cursor-not-allowed" style="border-color: {{.Settings.PrimaryColor}}; color: {{.Settings.PrimaryColor}}">500 Credits - ₹499</div>
-                        <div class="w-full premium-badge text-white font-bold py-2 rounded-xl text-sm text-center opacity-60 cursor-not-allowed">1200 Credits - ₹999</div>
-                    </div>
-                    <p class="text-xs text-slate-400 text-center mt-2">🚧 Coming Soon</p>
-                </div>
-                <div>
-                    <div class="text-sm font-bold mb-2">👑 Premium Rider</div>
-                    {{if .CurrentUser.IsPremium}}
-                    <div class="premium-badge text-white font-bold py-2 rounded-xl text-sm text-center">🏍️ ACTIVE</div>
-                    {{else}}
-                    <div class="w-full premium-badge text-white font-bold py-2 rounded-xl text-sm text-center opacity-60 cursor-not-allowed">Upgrade - ₹499/month</div>
-                    {{end}}
-                </div>
-                {{else}}
-                <div class="text-center text-sm text-slate-600">Login to buy credits!</div>
-                {{end}}
-            </div>
+            <div class="bg-gradient-to-br from-[#e85d04]/10 to-[#d00000]/10 rounded-2xl p-4 border border-[#e85d04]/30"><h2 class="font-extrabold text-base mb-3">💰 Premium Features</h2>{{if .CurrentUser}}<div class="bg-white rounded-xl p-3 mb-3 text-center"><div class="text-xs text-slate-500">Your Credits</div><div class="text-2xl font-bold" style="color: {{.Settings.PrimaryColor}}">₹{{.CurrentUser.Credits}}</div></div><div class="mb-4"><div class="text-sm font-bold mb-2">📦 Buy Credits</div><div class="space-y-2"><div class="w-full bg-white border-2 text-center font-bold py-2 rounded-xl text-sm opacity-60 cursor-not-allowed" style="border-color: {{.Settings.PrimaryColor}}; color: {{.Settings.PrimaryColor}}">500 Credits - ₹499</div><div class="w-full premium-badge text-white font-bold py-2 rounded-xl text-sm text-center opacity-60 cursor-not-allowed">1200 Credits - ₹999</div></div><p class="text-xs text-slate-400 text-center mt-2">🚧 Coming Soon</p></div><div><div class="text-sm font-bold mb-2">👑 Premium Rider</div>{{if .CurrentUser.IsPremium}}<div class="premium-badge text-white font-bold py-2 rounded-xl text-sm text-center">🏍️ ACTIVE</div>{{else}}<div class="w-full premium-badge text-white font-bold py-2 rounded-xl text-sm text-center opacity-60 cursor-not-allowed">Upgrade - ₹499/month</div>{{end}}</div>{{else}}<div class="text-center text-sm text-slate-600">Login to buy credits!</div>{{end}}</div>
             
-            <div class="bg-slate-50 rounded-2xl p-4 mt-4">
-                <h2 class="font-extrabold text-base mb-3">🛡️ Ride Safe</h2>
-                <p class="text-xs text-slate-600">Always wear helmet, carry documents, and ride responsibly. Highway Cruizzers connects riders - verify before riding together.</p>
-            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 mt-4"><h2 class="font-extrabold text-base mb-3">🛡️ Ride Safe</h2><p class="text-xs text-slate-600">Always wear helmet, carry documents, and ride responsibly. Highway Cruizzers connects riders - verify before riding together.</p></div>
 
-            <!-- Featured Ad -->
-            {{if .FeaturedAds}}
-            {{range .FeaturedAds}}
-            <div class="mt-4">
-                <a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">
-                    {{if .ImageURL}}
-                    <img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-40 object-cover rounded-2xl" onerror="this.src='https://placehold.co/400x200/ffedd5/black?text=Sponsored'">
-                    {{else}}
-                    <div class="w-full h-40 bg-gray-200 rounded-2xl flex items-center justify-center">{{.Title}}</div>
-                    {{end}}
-                    <div class="text-center text-xs text-slate-400 mt-1">Sponsored</div>
-                </a>
-            </div>
-            {{end}}
-            {{end}}
+            {{if .FeaturedAds}}{{range .FeaturedAds}}<div class="mt-4"><a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-40 object-cover rounded-2xl" onerror="this.src='https://placehold.co/400x200/ffedd5/black?text=Sponsored'">{{else}}<div class="w-full h-40 bg-gray-200 rounded-2xl flex items-center justify-center">{{.Title}}</div>{{end}}<div class="text-center text-xs text-slate-400 mt-1">Sponsored</div></a></div>{{end}}{{end}}
         </aside>
     </div>
 
     <!-- Join Ride Modal -->
     <div id="joinModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4" onclick="closeModalOnOutside(event)">
         <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div class="sticky top-0 bg-white border-b border-slate-100 p-4 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-slate-900">🤝 Join This Ride</h3>
-                <button onclick="closeJoinModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
-            </div>
-            <div class="p-4">
-                <form id="joinForm" onsubmit="submitJoinRequest(event)">
-                    <input type="hidden" id="joinRideId" name="ride_id">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Tell the rider about yourself *</label>
-                            <textarea id="joinMessage" name="message" rows="4" required placeholder="Share your riding experience, bike model, why you want to join this ride..." class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none"></textarea>
-                        </div>
-                        <div class="bg-amber-50 rounded-xl p-3 text-sm text-amber-800">
-                            <p class="font-semibold mb-1">📌 What happens next?</p>
-                            <p class="text-xs">The ride organizer will review your request and contact you via WhatsApp.</p>
-                        </div>
-                        <div class="flex gap-3 pt-2">
-                            <button type="button" onclick="closeJoinModal()" class="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition">Cancel</button>
-                            <button type="submit" class="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition font-semibold">Send Request</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+            <div class="sticky top-0 bg-white border-b border-slate-100 p-4 flex justify-between items-center"><h3 class="text-lg font-bold text-slate-900">🤝 Join This Ride</h3><button onclick="closeJoinModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button></div>
+            <div class="p-4"><form id="joinForm" onsubmit="submitJoinRequest(event)"><input type="hidden" id="joinRideId" name="ride_id"><div class="space-y-4"><div><label class="block text-sm font-medium text-slate-700 mb-1">Tell the rider about yourself *</label><textarea id="joinMessage" name="message" rows="4" required placeholder="Share your riding experience, bike model, why you want to join this ride..." class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#e85d04] outline-none"></textarea></div><div class="bg-amber-50 rounded-xl p-3 text-sm text-amber-800"><p class="font-semibold mb-1">📌 What happens next?</p><p class="text-xs">The ride organizer will review your request and contact you via WhatsApp.</p></div><div class="flex gap-3 pt-2"><button type="button" onclick="closeJoinModal()" class="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition">Cancel</button><button type="submit" class="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition font-semibold">Send Request</button></div></div></form></div>
         </div>
     </div>
 
     <!-- Footer -->
-    <div class="text-center py-4 border-t border-slate-100 bg-white w-full">
-        <p class="text-xs text-slate-400">Made in India 🇮🇳 with ❤️ by <a href="https://kanams.ai" target="_blank" class="hover:underline font-medium" style="color: {{.Settings.PrimaryColor}}">kanams.ai</a> | Ride Free, Ride Safe 🏍️</p>
-    </div>
+    <div class="text-center py-4 border-t border-slate-100 bg-white w-full"><p class="text-xs text-slate-400">Made in India 🇮🇳 with ❤️ by <a href="https://kanams.ai" target="_blank" class="hover:underline font-medium" style="color: {{.Settings.PrimaryColor}}">kanams.ai</a> | Ride Free, Ride Safe 🏍️</p></div>
 
     <script>
         let currentJoinRideId = null;
 
         function toggleMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobileOverlay');
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
             if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                sidebar.classList.add('translate-x-0');
-                overlay.classList.remove('hidden');
-                document.body.classList.add('mobile-menu-open');
-            } else {
-                closeMobileMenu();
-            }
+                sidebar.classList.remove('-translate-x-full'); sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden'); document.body.classList.add('mobile-menu-open');
+            } else { closeMobileMenu(); }
         }
-
         function closeMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            sidebar.classList.add('-translate-x-full');
-            sidebar.classList.remove('translate-x-0');
-            overlay.classList.add('hidden');
-            document.body.classList.remove('mobile-menu-open');
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.add('-translate-x-full'); sidebar.classList.remove('translate-x-0');
+            overlay.classList.add('hidden'); document.body.classList.remove('mobile-menu-open');
         }
+        window.addEventListener('resize', function() { if (window.innerWidth >= 1024) closeMobileMenu(); });
 
-        window.addEventListener('resize', function() {
-            if (window.innerWidth >= 1024) closeMobileMenu();
-        });
-
-        function boostRide(id) {
-            if (confirm("Boost this ride for ₹99? Get 7 days visibility!")) {
-                fetch('/boost/' + id, { method: 'POST' }).then(res => res.text()).then(text => { alert(text); if(text.includes("✅")) location.reload(); });
-            }
-        }
-
-        function featureRide(id) {
-            if (confirm("Feature this ride for ₹199? Get 24 hours top placement!")) {
-                fetch('/feature/' + id, { method: 'POST' }).then(res => res.text()).then(text => { alert(text); if(text.includes("✅")) location.reload(); });
-            }
-        }
-
-        function openJoinModal(rideId) {
-            currentJoinRideId = rideId;
-            document.getElementById('joinRideId').value = rideId;
-            document.getElementById('joinMessage').value = '';
-            document.getElementById('joinModal').classList.remove('hidden');
-            document.getElementById('joinModal').classList.add('flex');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeJoinModal() {
-            document.getElementById('joinModal').classList.add('hidden');
-            document.getElementById('joinModal').classList.remove('flex');
-            document.body.style.overflow = 'auto';
-        }
-
-        function openRentModal(rideId) {
-            alert("🚀 Rental booking coming soon! Contact the owner via WhatsApp.");
-        }
-
-        function openServiceModal(rideId) {
-            alert("🔧 Service booking coming soon! Contact the service provider via WhatsApp.");
-        }
-
-        function closeModalOnOutside(event) {
-            if (event.target === document.getElementById('joinModal')) {
-                closeJoinModal();
-            }
-        }
-
-        function submitJoinRequest(event) {
-            event.preventDefault();
-            
-            const rideId = currentJoinRideId;
-            const message = document.getElementById('joinMessage').value;
-            
-            if (!message.trim()) {
-                alert('Please tell the rider about yourself');
-                return;
-            }
-            
-            const submitBtn = event.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerText;
-            submitBtn.innerText = 'Sending...';
-            submitBtn.disabled = true;
-            
-            const formData = new FormData();
-            formData.append('message', message);
-            
-            fetch('/join/' + rideId, {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                alert(data.message);
-                if (data.success) {
-                    closeJoinModal();
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('Error sending request. Please try again.');
-            })
-            .finally(() => {
-                submitBtn.innerText = originalText;
-                submitBtn.disabled = false;
-            });
-        }
-
+        function boostRide(id) { if (confirm("Boost this ride for ₹99? Get 7 days visibility!")) { fetch('/boost/' + id, { method: 'POST' }).then(res => res.text()).then(text => { alert(text); if(text.includes("✅")) location.reload(); }); } }
+        function featureRide(id) { if (confirm("Feature this ride for ₹199? Get 24 hours top placement!")) { fetch('/feature/' + id, { method: 'POST' }).then(res => res.text()).then(text => { alert(text); if(text.includes("✅")) location.reload(); }); } }
+        function openJoinModal(rideId) { currentJoinRideId = rideId; document.getElementById('joinRideId').value = rideId; document.getElementById('joinMessage').value = ''; document.getElementById('joinModal').classList.remove('hidden'); document.getElementById('joinModal').classList.add('flex'); document.body.style.overflow = 'hidden'; }
+        function closeJoinModal() { document.getElementById('joinModal').classList.add('hidden'); document.getElementById('joinModal').classList.remove('flex'); document.body.style.overflow = 'auto'; }
+        function openRentModal(rideId) { alert("🚀 Rental booking coming soon! Contact the owner via WhatsApp."); }
+        function openServiceModal(rideId) { alert("🔧 Service booking coming soon! Contact the service provider via WhatsApp."); }
+        function closeModalOnOutside(event) { if (event.target === document.getElementById('joinModal')) { closeJoinModal(); } }
+        function submitJoinRequest(event) { event.preventDefault(); const rideId = currentJoinRideId; const message = document.getElementById('joinMessage').value; if (!message.trim()) { alert('Please tell the rider about yourself'); return; } const submitBtn = event.target.querySelector('button[type="submit"]'); const originalText = submitBtn.innerText; submitBtn.innerText = 'Sending...'; submitBtn.disabled = true; const formData = new FormData(); formData.append('message', message); fetch('/join/' + rideId, { method: 'POST', body: formData }).then(res => res.json()).then(data => { alert(data.message); if (data.success) { closeJoinModal(); } }).catch(err => { console.error('Error:', err); alert('Error sending request. Please try again.'); }).finally(() => { submitBtn.innerText = originalText; submitBtn.disabled = false; }); }
         function showLoginPrompt() { alert("🔑 Please login or sign up to join the biker community!"); }
         function addPoll() { alert("📊 Poll feature coming soon!"); }
         function insertEmoji() { const t = document.querySelector('textarea[name="content"]'); if(t) t.value += " 🏍️ "; t?.focus(); }
-
-        function switchAuthTab(n) {
-            const loginDiv = document.getElementById('auth-login');
-            const signupDiv = document.getElementById('auth-signup');
-            const loginTab = document.getElementById('tab-login');
-            const signupTab = document.getElementById('tab-signup');
-            if (n === 0) {
-                loginDiv.classList.remove('hidden'); signupDiv.classList.add('hidden');
-                loginTab.classList.add('border-b-2');
-                signupTab.classList.remove('border-b-2');
-            } else {
-                loginDiv.classList.add('hidden'); signupDiv.classList.remove('hidden');
-                signupTab.classList.add('border-b-2');
-                loginTab.classList.remove('border-b-2');
-            }
-        }
-
-        function toggleFollow(btn) {
-            if (btn.textContent.includes('Follow')) { btn.innerHTML = 'Following ✓'; btn.classList.add('!bg-emerald-600'); }
-            else { btn.textContent = 'Follow'; btn.classList.remove('!bg-emerald-600'); }
-        }
-
+        function switchAuthTab(n) { const loginDiv = document.getElementById('auth-login'), signupDiv = document.getElementById('auth-signup'), loginTab = document.getElementById('tab-login'), signupTab = document.getElementById('tab-signup'); if (n === 0) { loginDiv.classList.remove('hidden'); signupDiv.classList.add('hidden'); loginTab.classList.add('border-b-2'); signupTab.classList.remove('border-b-2'); } else { loginDiv.classList.add('hidden'); signupDiv.classList.remove('hidden'); signupTab.classList.add('border-b-2'); loginTab.classList.remove('border-b-2'); } }
+        function toggleFollow(btn) { if (btn.textContent.includes('Follow')) { btn.innerHTML = 'Following ✓'; btn.classList.add('!bg-emerald-600'); } else { btn.textContent = 'Follow'; btn.classList.remove('!bg-emerald-600'); } }
         function attachMedia() { const url = prompt("📸 Paste your image URL:"); if(url) document.querySelector('input[name="image_url"]').value = url; }
     </script>
 </body>
