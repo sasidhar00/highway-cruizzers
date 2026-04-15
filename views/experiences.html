@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Travel Experiences - {{.Settings.SiteName}}</title>
+    <title>{{.Settings.SiteName}} - Travel Experiences</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .experience-card { transition: transform 0.3s, box-shadow 0.3s; }
         .experience-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-        .category-active { background-color: {{.Settings.PrimaryColor}}; color: white; }
+        .category-active { background-color: {{$.Settings.PrimaryColor}}; color: white; }
         .category-inactive { background-color: #f1f5f9; color: #64748b; }
         .featured-badge { background: linear-gradient(135deg, #f59e0b, #e85d04); }
-        @media (max-width: 768px) { .mobile-stack { flex-direction: column; } }
+        .sidebar-item:active { background-color: #f1f5f9; }
+        .highway-brand { font-weight: 900; letter-spacing: -2.5px; text-transform: lowercase; }
+        .logo-img { max-height: 50px; width: auto; object-fit: contain; }
+        .ad-container { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 1rem; overflow: hidden; transition: transform 0.3s ease; }
+        .ad-container:hover { transform: translateY(-2px); }
+        @media (max-width: 768px) { button, a, .sidebar-item, [onclick] { cursor: pointer; min-height: 44px; } }
     </style>
 </head>
 <body class="bg-slate-50">
-    <!-- Sidebar (same as index.html) -->
     <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="closeMobileMenu()"></div>
     
     <div class="flex flex-col lg:flex-row max-w-7xl mx-auto min-h-screen relative">
@@ -27,7 +31,7 @@
                 <div class="p-3 mb-4 flex justify-between items-center">
                     <div>
                         {{if and .Settings .Settings.LogoURL}}
-                        <img src="{{.Settings.LogoURL}}" alt="{{.Settings.SiteName}}" class="logo-img" style="max-height: 50px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                        <img src="{{.Settings.LogoURL}}" alt="{{.Settings.SiteName}}" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
                         <h1 class="highway-brand text-2xl" style="color: {{.Settings.PrimaryColor}}; display: none;">{{.Settings.SiteName}}</h1>
                         {{else}}
                         <h1 class="highway-brand text-2xl" style="color: #e85d04">{{.Settings.SiteName}}</h1>
@@ -102,7 +106,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
 
-        <!-- MAIN CONTENT - EXPERIENCES PAGE -->
+        <!-- MAIN CONTENT -->
         <main class="flex-1 w-full min-w-0 pb-20 lg:pb-0">
             <div class="sticky top-0 bg-white/95 backdrop-blur-md p-3 border-b border-slate-100 font-extrabold text-base z-20 flex items-center gap-3">
                 <button onclick="toggleMobileMenu()" class="lg:hidden text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">
@@ -124,22 +128,12 @@
                 </div>
             </div>
 
-            <!-- Category Filters -->
-            <div class="p-4 bg-white border-b sticky top-12 z-10">
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="filterCategory('all')" id="cat-all" class="category-active px-4 py-2 rounded-full text-sm font-semibold transition">All Experiences</button>
-                    <button onclick="filterCategory('family')" id="cat-family" class="category-inactive px-4 py-2 rounded-full text-sm font-semibold transition">🏠 Family Caravans</button>
-                    <button onclick="filterCategory('group')" id="cat-group" class="category-inactive px-4 py-2 rounded-full text-sm font-semibold transition">👥 Group Tours</button>
-                    <button onclick="filterCategory('biker')" id="cat-biker" class="category-inactive px-4 py-2 rounded-full text-sm font-semibold transition">🏍️ Biker Expeditions</button>
-                </div>
-            </div>
-
             <!-- Experiences Grid -->
-            <div id="experiences-grid" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {{range .Experiences}}
-                <div class="experience-card bg-white rounded-2xl shadow-lg overflow-hidden" data-category="{{.Category}}">
+                <div class="experience-card bg-white rounded-2xl shadow-lg overflow-hidden">
                     {{if .IsFeatured}}
-                    <div class="featured-badge text-white text-xs font-bold px-3 py-1 absolute mt-2 ml-2 rounded-full">🔥 FEATURED</div>
+                    <div class="featured-badge text-white text-xs font-bold px-3 py-1 absolute mt-2 ml-2 rounded-full z-10">🔥 FEATURED</div>
                     {{end}}
                     <div class="relative h-48 bg-cover bg-center" style="background-image: url('{{if .CoverImage}}{{.CoverImage}}{{else}}https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800{{end}}')">
                         <div class="absolute inset-0 bg-black/30"></div>
@@ -172,7 +166,7 @@
                                 <span class="text-sm font-semibold">{{printf "%.1f" .Rating}}</span>
                                 <span class="text-xs text-gray-400">({{.TotalReviews}} reviews)</span>
                             </div>
-                            <a href="/experience/{{.ID}}" class="bg-{{.Settings.PrimaryColor}} text-white px-4 py-2 rounded-lg text-sm hover:opacity-90 transition">View Details →</a>
+                            <a href="/experience/{{.ID}}" class="text-white px-4 py-2 rounded-lg text-sm hover:opacity-90 transition" style="background-color: {{$.Settings.PrimaryColor}}">View Details →</a>
                         </div>
                     </div>
                 </div>
@@ -188,7 +182,14 @@
 
         <!-- RIGHT SIDEBAR -->
         <aside class="hidden lg:block w-80 p-4 sticky top-0 h-screen overflow-y-auto">
-            <div class="bg-slate-100 rounded-full px-4 py-2 flex items-center gap-2 mb-4"><span class="text-slate-400">🔍</span><form action="/search" method="GET" class="flex-1"><input type="text" name="q" placeholder="Search experiences..." class="bg-transparent outline-none text-sm w-full"></form></div>
+            <div class="bg-slate-100 rounded-full px-4 py-2 flex items-center gap-2 mb-4">
+                <span class="text-slate-400">🔍</span>
+                <form action="/search" method="GET" class="flex-1">
+                    <input type="text" name="q" placeholder="Search experiences..." class="bg-transparent outline-none text-sm w-full">
+                </form>
+            </div>
+            
+            {{if .SidebarAds}}<div class="space-y-3 mb-4">{{range .SidebarAds}}<a href="/ad/click/{{.ID}}" target="_blank" class="ad-container block">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-32 object-cover rounded-xl">{{else}}<div class="w-full h-32 bg-gray-200 rounded-xl flex items-center justify-center">{{.Title}}</div>{{end}}</a>{{end}}</div>{{end}}
             
             <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 mb-4 border border-amber-200">
                 <h2 class="font-extrabold text-base mb-3">🏍️ Biking Trends</h2>
@@ -213,7 +214,9 @@
         </aside>
     </div>
 
-    <div class="text-center py-4 border-t border-slate-100 bg-white w-full"><p class="text-xs text-slate-400">Made in India 🇮🇳 with ❤️ by <a href="https://kanams.ai" target="_blank" class="hover:underline font-medium" style="color: {{.Settings.PrimaryColor}}">kanams.ai</a> | Ride Free, Ride Safe 🏍️</p></div>
+    <div class="text-center py-4 border-t border-slate-100 bg-white w-full">
+        <p class="text-xs text-slate-400">Made in India 🇮🇳 with ❤️ by <a href="https://kanams.ai" target="_blank" class="hover:underline font-medium" style="color: {{.Settings.PrimaryColor}}">kanams.ai</a> | Ride Free, Ride Safe 🏍️</p>
+    </div>
 
     <script>
         function toggleMobileMenu() {
@@ -229,33 +232,7 @@
             overlay.classList.add('hidden'); document.body.classList.remove('mobile-menu-open');
         }
         window.addEventListener('resize', function() { if (window.innerWidth >= 1024) closeMobileMenu(); });
-
-        function filterCategory(category) {
-            const cards = document.querySelectorAll('#experiences-grid .experience-card');
-            const buttons = ['all', 'family', 'group', 'biker'];
-            buttons.forEach(btn => {
-                const el = document.getElementById('cat-' + btn);
-                if (el) {
-                    if (btn === category) {
-                        el.classList.remove('category-inactive');
-                        el.classList.add('category-active');
-                    } else {
-                        el.classList.remove('category-active');
-                        el.classList.add('category-inactive');
-                    }
-                }
-            });
-            
-            cards.forEach(card => {
-                if (category === 'all' || card.dataset.category === category) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-
-        function showLoginPrompt() { alert("🔑 Please login to book experiences!"); }
+        function showLoginPrompt() { alert("🔑 Please login to continue"); }
         function switchAuthTab(n) {
             const loginDiv = document.getElementById('auth-login'), signupDiv = document.getElementById('auth-signup');
             const loginTab = document.getElementById('tab-login'), signupTab = document.getElementById('tab-signup');
