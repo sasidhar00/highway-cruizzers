@@ -1,4 +1,4 @@
-// main.go - FULLY FIXED PRODUCTION READY
+// main.go - COMPLETE HIGHWAY CRUIZZERS WITH ALL STRUCTS
 package main
 
 import (
@@ -14,6 +14,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"regexp"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -26,6 +27,8 @@ import (
 	
 	"github.com/joho/godotenv"
 )
+
+// ==================== STRUCT DEFINITIONS ====================
 
 type Ride struct {
 	ID           int
@@ -152,6 +155,46 @@ type RiderVerification struct {
 	VerifiedBy int
 }
 
+type Experience struct {
+	ID             int
+	Title          string
+	Category       string
+	Description    string
+	DurationDays   int
+	DurationNights int
+	Price          int
+	DiscountedPrice int
+	MaxPeople      int
+	MinPeople      int
+	Location       string
+	StartLocation  string
+	EndLocation    string
+	VehicleType    string
+	IsFeatured     bool
+	IsActive       bool
+	CoverImage     string
+	Rating         float64
+	TotalReviews   int
+	CreatedAt      time.Time
+}
+
+type ExperienceBooking struct {
+	ID             int
+	ExperienceID   int
+	UserID         int
+	TravelDate     time.Time
+	NumberOfPeople int
+	TotalPrice     int
+	SpecialRequests string
+	Status         string
+	ContactName    string
+	ContactPhone   string
+	ContactEmail   string
+	CreatedAt      time.Time
+}
+
+// ==================== GLOBAL VARIABLES ====================
+
 var db *sql.DB
 
 // Rate limiting structure
@@ -166,6 +209,8 @@ const (
 	MaxLoginAttempts  = 5
 	LockoutDuration   = 15 * time.Minute
 )
+
+// ==================== HELPER FUNCTIONS ====================
 
 func generateSecureToken() (string, error) {
 	bytes := make([]byte, 32)
@@ -197,359 +242,33 @@ func isValidEmail(email string) bool {
 	return re.MatchString(strings.ToLower(email))
 }
 
-func initDB() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️ No .env file found, using environment variables")
+func generateTagHTML(tags string) template.HTML {
+	if tags == "" {
+		return ""
 	}
-
-	dbURL := os.Getenv("TURSO_DB_URL")
-	authToken := os.Getenv("TURSO_AUTH_TOKEN")
-
-	var err error
-	
-	if dbURL != "" && authToken != "" {
-		log.Println("🔗 Connecting to Turso database...")
-		db, err = sql.Open("libsql", dbURL+"?authToken="+authToken)
-		if err != nil {
-			log.Fatal("Error connecting to Turso:", err)
+	parts := strings.Split(tags, ",")
+	var sb strings.Builder
+	for _, t := range parts {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
 		}
-		log.Println("✅ Connected to Turso successfully!")
-	} else {
-		log.Println("📁 Using SQLite for local development")
-		db, err = sql.Open("sqlite3", "./highwaycruizzers.db")
-		if err != nil {
-			log.Fatal("Error opening SQLite:", err)
+		color := "slate"
+		switch t {
+		case "Royal Enfield", "Harley", "KTM", "Ducati", "Triumph", "BMW", "Honda", "Yamaha", "Suzuki", "Bajaj", "TVS":
+			color = "purple"
+		case "Weekend Ride", "Long Trip", "Highway", "Mountain", "Coastal":
+			color = "emerald"
+		case "Beginner Friendly", "Experienced Only", "Pillion Available":
+			color = "blue"
+		case "Urgent", "Leaving Soon":
+			color = "red"
+		case "Gear Provided", "Petrol Share":
+			color = "amber"
 		}
+		sb.WriteString(fmt.Sprintf(`<span class="inline-flex items-center px-3 py-1 text-xs font-bold rounded-2xl bg-%s-100 text-%s-700">%s</span>`, color, color, t))
 	}
-
-	if err := db.Ping(); err != nil {
-		log.Fatal("Database ping failed:", err)
-	}
-
-	createTablesSQL := `
-CREATE TABLE IF NOT EXISTS rides (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER DEFAULT 0,
-    username TEXT,
-    handle TEXT,
-    content TEXT,
-    price TEXT,
-    category TEXT,
-    tags TEXT,
-    image_url TEXT,
-    from_location TEXT,
-    to_location TEXT,
-    departure_date TEXT,
-    bike_model TEXT,
-    seats INTEGER DEFAULT 1,
-    likes INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'pending',
-    boost_until DATETIME,
-    featured_until DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    handle TEXT UNIQUE,
-    email TEXT UNIQUE,
-    phone TEXT DEFAULT '',
-    password_hash TEXT,
-    is_admin BOOLEAN DEFAULT FALSE,
-    credits INTEGER DEFAULT 500,
-    is_premium BOOLEAN DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE,
-    premium_until DATETIME,
-    membership_tier TEXT DEFAULT 'free',
-    bike_model TEXT DEFAULT '',
-    riding_exp TEXT DEFAULT '',
-    avatar_url TEXT DEFAULT '',
-    is_verified BOOLEAN DEFAULT FALSE
-);
-
-CREATE TABLE IF NOT EXISTS biking_news (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    content TEXT,
-    category TEXT,
-    likes INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS biking_trends (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    description TEXT,
-    trend TEXT,
-    percentage TEXT,
-    category TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    amount INTEGER,
-    type TEXT,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS password_resets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT,
-    token TEXT,
-    expires_at DATETIME,
-    used BOOLEAN DEFAULT FALSE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS ride_requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ride_id INTEGER,
-    rider_id INTEGER,
-    rider_name TEXT,
-    rider_email TEXT,
-    rider_phone TEXT,
-    message TEXT,
-    status TEXT DEFAULT 'pending',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(ride_id) REFERENCES rides(id)
-);
-
-CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    user_name TEXT,
-    title TEXT,
-    description TEXT,
-    price REAL,
-    category TEXT,
-    condition TEXT,
-    image_url TEXT,
-    location TEXT,
-    status TEXT DEFAULT 'available',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-);
-
-CREATE TABLE IF NOT EXISTS advertisements (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    image_url TEXT,
-    target_url TEXT,
-    position TEXT,
-    start_date DATETIME,
-    end_date DATETIME,
-    advertiser TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    impressions INTEGER DEFAULT 0,
-    clicks INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS marketplace_categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    icon TEXT,
-    slug TEXT
-);
-
-CREATE TABLE IF NOT EXISTS site_settings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    site_name TEXT,
-    logo_url TEXT,
-    favicon_url TEXT,
-    primary_color TEXT,
-    secondary_color TEXT
-);
-
-CREATE TABLE IF NOT EXISTS rider_verifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER UNIQUE,
-    dl_number TEXT,
-    bike_rc_number TEXT,
-    status TEXT DEFAULT 'pending',
-    verified_at DATETIME,
-    verified_by INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-);
-
-CREATE TABLE IF NOT EXISTS security_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_type TEXT,
-    user_id INTEGER,
-    email TEXT,
-    ip_address TEXT,
-    user_agent TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    token TEXT UNIQUE,
-    user_id INTEGER,
-    ip_address TEXT,
-    user_agent TEXT,
-    expires_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS ride_safety_reports (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ride_id INTEGER,
-    reporter_id INTEGER,
-    description TEXT,
-    severity TEXT,
-    status TEXT DEFAULT 'pending',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-`
-
-	_, err = db.Exec(createTablesSQL)
-	if err != nil {
-		log.Fatal("Error creating tables:", err)
-	}
-	log.Println("✅ Tables created/verified")
-
-	// Add missing columns
-	db.Exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT DEFAULT ''`)
-	db.Exec(`ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`)
-	db.Exec(`ALTER TABLE products ADD COLUMN user_name TEXT DEFAULT ''`)
-
-	// Create directories
-	os.MkdirAll("./static/logos", 0755)
-	os.MkdirAll("./static/ads", 0755)
-
-	// Create default logo
-	createDefaultLogo()
-	createSampleAdImages()
-
-	// Seed admin user
-	var adminCount int
-	db.QueryRow("SELECT COUNT(*) FROM users WHERE is_admin = 1").Scan(&adminCount)
-	if adminCount == 0 {
-		hash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
-		_, err = db.Exec(`INSERT INTO users (username, handle, email, phone, password_hash, is_admin, credits, is_premium, membership_tier, bike_model, riding_exp, avatar_url, is_verified) 
-		         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
-			"Highway Cruizzers Admin", "highwayadmin", "admin@highwaycruizzers.com", "9999999999", hash, true, 9999, true, "premium", "Royal Enfield", "10+ years", "", true)
-		if err != nil {
-			log.Println("Warning: Could not create admin user:", err)
-		} else {
-			log.Println("✅ Admin created: admin@highwaycruizzers.com / admin123")
-		}
-	}
-
-	// Seed site settings
-	var settingsCount int
-	db.QueryRow("SELECT COUNT(*) FROM site_settings").Scan(&settingsCount)
-	if settingsCount == 0 {
-		db.Exec(`INSERT INTO site_settings (site_name, logo_url, primary_color, secondary_color) VALUES (?, ?, ?, ?)`,
-			"Highway Cruizzers", "/static/logos/logo.png", "#e85d04", "#d00000")
-		log.Println("✅ Default site settings created")
-	}
-
-	// Seed news
-	var newsCount int
-	db.QueryRow("SELECT COUNT(*) FROM biking_news").Scan(&newsCount)
-	if newsCount == 0 {
-		newsData := []struct {
-			title, content, category string
-		}{
-			{"🏍️ Royal Enfield New Launch", "Classic 650 launched with updated features and retro design.", "bikes"},
-			{"🛣️ Highway Safety Tips", "Essential safety tips for long-distance motorcycle touring.", "safety"},
-			{"⚡ Electric Revolution", "New electric motorcycles coming to India in 2025.", "electric"},
-			{"🏁 Riding Gears Guide", "Best helmets and riding gear for Indian conditions.", "gear"},
-			{"🗺️ Himalayan Expedition", "Annual bike rally to Ladakh announced for June.", "events"},
-			{"🔧 Service Tips", "DIY maintenance tips for your motorcycle.", "maintenance"},
-		}
-		for _, news := range newsData {
-			db.Exec("INSERT INTO biking_news (title, content, category) VALUES (?, ?, ?)", news.title, news.content, news.category)
-		}
-		log.Println("✅ Seeded biking news articles")
-	}
-
-	// Seed trends
-	var trendsCount int
-	db.QueryRow("SELECT COUNT(*) FROM biking_trends").Scan(&trendsCount)
-	if trendsCount == 0 {
-		trendsData := []struct {
-			title, description, trend, percentage, category string
-		}{
-			{"Leh-Ladakh", "Most popular riding destination this season", "up", "+45%", "destination"},
-			{"Adventure Touring", "Adventure bike sales increasing", "up", "+32%", "trending"},
-			{"Weekend Rides", "Group rides gaining popularity", "up", "+28%", "activity"},
-			{"Vintage Restoration", "Classic bike restoration trending", "stable", "+15%", "hobby"},
-			{"Safety Gear", "Premium riding gear demand rising", "up", "+40%", "gear"},
-		}
-		for _, trend := range trendsData {
-			db.Exec("INSERT INTO biking_trends (title, description, trend, percentage, category) VALUES (?, ?, ?, ?, ?)",
-				trend.title, trend.description, trend.trend, trend.percentage, trend.category)
-		}
-		log.Println("✅ Seeded biking trends")
-	}
-
-	// Seed marketplace categories
-	var catCount int
-	db.QueryRow("SELECT COUNT(*) FROM marketplace_categories").Scan(&catCount)
-	if catCount == 0 {
-		categories := []struct{ name, icon, slug string }{
-			{"Helmets", "🪖", "helmets"},
-			{"Riding Jackets", "🧥", "jackets"},
-			{"Gloves", "🧤", "gloves"},
-			{"Boots", "👢", "boots"},
-			{"Bike Parts", "🔧", "parts"},
-			{"Accessories", "🎒", "accessories"},
-		}
-		for _, cat := range categories {
-			db.Exec("INSERT INTO marketplace_categories (name, icon, slug) VALUES (?, ?, ?)",
-				cat.name, cat.icon, cat.slug)
-		}
-		log.Println("✅ Seeded marketplace categories")
-	}
-
-	// Seed sample advertisements
-	var adCount int
-	db.QueryRow("SELECT COUNT(*) FROM advertisements").Scan(&adCount)
-	if adCount == 0 {
-		ads := []struct {
-			title, imageURL, targetURL, position, advertiser string
-		}{
-			{"Royal Enfield Accessories", "/static/ads/ad1.jpg", "https://royalenfield.com", "sidebar", "Royal Enfield"},
-			{"Premium Riding Gear Sale", "/static/ads/ad2.jpg", "https://example.com/gear", "banner", "RidingGear Pro"},
-			{"Weekend Ride to Leh", "/static/ads/ad3.jpg", "https://example.com/leh-tour", "featured", "Biking Tours India"},
-			{"Helmet Store - 30% OFF", "/static/ads/ad4.jpg", "https://example.com/helmets", "sidebar", "SafeRide Helmets"},
-		}
-		for _, ad := range ads {
-			db.Exec(`INSERT INTO advertisements (title, image_url, target_url, position, advertiser, start_date, end_date, is_active) 
-			         VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now', '+30 days'), 1)`,
-				ad.title, ad.imageURL, ad.targetURL, ad.position, ad.advertiser)
-		}
-		log.Println("✅ Seeded sample advertisements")
-	}
-
-	// Seed sample products
-	var productCount int
-	db.QueryRow("SELECT COUNT(*) FROM products").Scan(&productCount)
-	if productCount == 0 {
-		products := []struct {
-			title, description, category, condition, imageURL, location string
-			price float64
-		}{
-			{"Royal Enfield Helmet", "Premium full-face helmet with DOT certification", "Helmets", "Like New", "/static/logo.png", "Mumbai", 3499},
-			{"Riding Jacket", "Waterproof riding jacket with armor", "Riding Jackets", "New", "/static/logo.png", "Delhi", 5999},
-			{"Bike Cover", "Waterproof bike cover for Royal Enfield", "Accessories", "New", "/static/logo.png", "Bangalore", 899},
-			{"Handlebar Grips", "Premium rubber grips for better control", "Bike Parts", "New", "/static/logo.png", "Pune", 499},
-		}
-		for _, p := range products {
-			db.Exec(`INSERT INTO products (user_id, user_name, title, description, price, category, condition, image_url, location, status) 
-			         VALUES (1, 'Highway Cruizzers Admin', ?, ?, ?, ?, ?, ?, ?, 'available')`,
-				p.title, p.description, p.price, p.category, p.condition, p.imageURL, p.location)
-		}
-		log.Println("✅ Seeded sample products")
-	}
+	return template.HTML(sb.String())
 }
 
 func createDefaultLogo() {
@@ -594,35 +313,6 @@ func createSampleAdImages() {
 			os.WriteFile(path, []byte(svg), 0644)
 		}
 	}
-}
-
-func generateTagHTML(tags string) template.HTML {
-	if tags == "" {
-		return ""
-	}
-	parts := strings.Split(tags, ",")
-	var sb strings.Builder
-	for _, t := range parts {
-		t = strings.TrimSpace(t)
-		if t == "" {
-			continue
-		}
-		color := "slate"
-		switch t {
-		case "Royal Enfield", "Harley", "KTM", "Ducati", "Triumph", "BMW", "Honda", "Yamaha", "Suzuki", "Bajaj", "TVS":
-			color = "purple"
-		case "Weekend Ride", "Long Trip", "Highway", "Mountain", "Coastal":
-			color = "emerald"
-		case "Beginner Friendly", "Experienced Only", "Pillion Available":
-			color = "blue"
-		case "Urgent", "Leaving Soon":
-			color = "red"
-		case "Gear Provided", "Petrol Share":
-			color = "amber"
-		}
-		sb.WriteString(fmt.Sprintf(`<span class="inline-flex items-center px-3 py-1 text-xs font-bold rounded-2xl bg-%s-100 text-%s-700">%s</span>`, color, color, t))
-	}
-	return template.HTML(sb.String())
 }
 
 func getCurrentUser(c *fiber.Ctx) *User {
@@ -803,6 +493,442 @@ func fetchRides(query string, args ...interface{}) ([]Ride, error) {
 	}
 	return rides, nil
 }
+
+// ==================== DATABASE INITIALIZATION ====================
+
+func initDB() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️ No .env file found, using environment variables")
+	}
+
+	dbURL := os.Getenv("TURSO_DB_URL")
+	authToken := os.Getenv("TURSO_AUTH_TOKEN")
+
+	var err error
+	
+	if dbURL != "" && authToken != "" {
+		log.Println("🔗 Connecting to Turso database...")
+		db, err = sql.Open("libsql", dbURL+"?authToken="+authToken)
+		if err != nil {
+			log.Fatal("Error connecting to Turso:", err)
+		}
+		log.Println("✅ Connected to Turso successfully!")
+	} else {
+		log.Println("📁 Using SQLite for local development")
+		db, err = sql.Open("sqlite3", "./highwaycruizzers.db")
+		if err != nil {
+			log.Fatal("Error opening SQLite:", err)
+		}
+	}
+
+	if err := db.Ping(); err != nil {
+		log.Fatal("Database ping failed:", err)
+	}
+
+	createTablesSQL := `
+CREATE TABLE IF NOT EXISTS rides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER DEFAULT 0,
+    username TEXT,
+    handle TEXT,
+    content TEXT,
+    price TEXT,
+    category TEXT,
+    tags TEXT,
+    image_url TEXT,
+    from_location TEXT,
+    to_location TEXT,
+    departure_date TEXT,
+    bike_model TEXT,
+    seats INTEGER DEFAULT 1,
+    likes INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    boost_until DATETIME,
+    featured_until DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    handle TEXT UNIQUE,
+    email TEXT UNIQUE,
+    phone TEXT DEFAULT '',
+    password_hash TEXT,
+    is_admin BOOLEAN DEFAULT FALSE,
+    credits INTEGER DEFAULT 500,
+    is_premium BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    premium_until DATETIME,
+    membership_tier TEXT DEFAULT 'free',
+    bike_model TEXT DEFAULT '',
+    riding_exp TEXT DEFAULT '',
+    avatar_url TEXT DEFAULT '',
+    is_verified BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id INTEGER PRIMARY KEY,
+    bio TEXT,
+    location TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS biking_news (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    content TEXT,
+    category TEXT,
+    likes INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS biking_trends (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    description TEXT,
+    trend TEXT,
+    percentage TEXT,
+    category TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount INTEGER,
+    type TEXT,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT,
+    token TEXT,
+    expires_at DATETIME,
+    used BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ride_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ride_id INTEGER,
+    rider_id INTEGER,
+    rider_name TEXT,
+    rider_email TEXT,
+    rider_phone TEXT,
+    message TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(ride_id) REFERENCES rides(id)
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    user_name TEXT,
+    title TEXT,
+    description TEXT,
+    price REAL,
+    category TEXT,
+    condition TEXT,
+    image_url TEXT,
+    location TEXT,
+    status TEXT DEFAULT 'available',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS advertisements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    image_url TEXT,
+    target_url TEXT,
+    position TEXT,
+    start_date DATETIME,
+    end_date DATETIME,
+    advertiser TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    impressions INTEGER DEFAULT 0,
+    clicks INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS marketplace_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    icon TEXT,
+    slug TEXT
+);
+
+CREATE TABLE IF NOT EXISTS site_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_name TEXT,
+    logo_url TEXT,
+    favicon_url TEXT,
+    primary_color TEXT,
+    secondary_color TEXT
+);
+
+CREATE TABLE IF NOT EXISTS rider_verifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE,
+    dl_number TEXT,
+    bike_rc_number TEXT,
+    status TEXT DEFAULT 'pending',
+    verified_at DATETIME,
+    verified_by INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS security_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT,
+    user_id INTEGER,
+    email TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE,
+    user_id INTEGER,
+    ip_address TEXT,
+    user_agent TEXT,
+    expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ride_safety_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ride_id INTEGER,
+    reporter_id INTEGER,
+    description TEXT,
+    severity TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS experiences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    duration_days INTEGER,
+    duration_nights INTEGER,
+    price INTEGER,
+    discounted_price INTEGER,
+    max_people INTEGER,
+    min_people INTEGER DEFAULT 1,
+    location TEXT,
+    start_location TEXT,
+    end_location TEXT,
+    vehicle_type TEXT,
+    is_featured BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    cover_image TEXT,
+    rating REAL DEFAULT 0,
+    total_reviews INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS experience_bookings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    experience_id INTEGER,
+    user_id INTEGER,
+    travel_date DATE,
+    number_of_people INTEGER,
+    total_price INTEGER,
+    special_requests TEXT,
+    status TEXT DEFAULT 'pending',
+    contact_name TEXT,
+    contact_phone TEXT,
+    contact_email TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(experience_id) REFERENCES experiences(id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
+);
+`
+
+	_, err = db.Exec(createTablesSQL)
+	if err != nil {
+		log.Fatal("Error creating tables:", err)
+	}
+	log.Println("✅ Tables created/verified")
+
+	// Add missing columns
+	db.Exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`)
+	db.Exec(`ALTER TABLE products ADD COLUMN user_name TEXT DEFAULT ''`)
+
+	// Create directories
+	os.MkdirAll("./static/logos", 0755)
+	os.MkdirAll("./static/ads", 0755)
+
+	// Create default logo
+	createDefaultLogo()
+	createSampleAdImages()
+
+	// Seed admin user
+	var adminCount int
+	db.QueryRow("SELECT COUNT(*) FROM users WHERE is_admin = 1").Scan(&adminCount)
+	if adminCount == 0 {
+		hash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		_, err = db.Exec(`INSERT INTO users (username, handle, email, phone, password_hash, is_admin, credits, is_premium, membership_tier, bike_model, riding_exp, avatar_url, is_verified) 
+		         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+			"Highway Cruizzers Admin", "highwayadmin", "admin@highwaycruizzers.com", "9999999999", hash, true, 9999, true, "premium", "Royal Enfield", "10+ years", "", true)
+		if err != nil {
+			log.Println("Warning: Could not create admin user:", err)
+		} else {
+			log.Println("✅ Admin created: admin@highwaycruizzers.com / admin123")
+		}
+	}
+
+	// Seed site settings
+	var settingsCount int
+	db.QueryRow("SELECT COUNT(*) FROM site_settings").Scan(&settingsCount)
+	if settingsCount == 0 {
+		db.Exec(`INSERT INTO site_settings (site_name, logo_url, primary_color, secondary_color) VALUES (?, ?, ?, ?)`,
+			"Highway Cruizzers", "/static/logos/logo.png", "#e85d04", "#d00000")
+		log.Println("✅ Default site settings created")
+	}
+
+	// Seed news
+	var newsCount int
+	db.QueryRow("SELECT COUNT(*) FROM biking_news").Scan(&newsCount)
+	if newsCount == 0 {
+		newsData := []struct {
+			title, content, category string
+		}{
+			{"🏍️ Royal Enfield New Launch", "Classic 650 launched with updated features and retro design.", "bikes"},
+			{"🛣️ Highway Safety Tips", "Essential safety tips for long-distance motorcycle touring.", "safety"},
+			{"⚡ Electric Revolution", "New electric motorcycles coming to India in 2025.", "electric"},
+			{"🏁 Riding Gears Guide", "Best helmets and riding gear for Indian conditions.", "gear"},
+			{"🗺️ Himalayan Expedition", "Annual bike rally to Ladakh announced for June.", "events"},
+			{"🔧 Service Tips", "DIY maintenance tips for your motorcycle.", "maintenance"},
+		}
+		for _, news := range newsData {
+			db.Exec("INSERT INTO biking_news (title, content, category) VALUES (?, ?, ?)", news.title, news.content, news.category)
+		}
+		log.Println("✅ Seeded biking news articles")
+	}
+
+	// Seed trends
+	var trendsCount int
+	db.QueryRow("SELECT COUNT(*) FROM biking_trends").Scan(&trendsCount)
+	if trendsCount == 0 {
+		trendsData := []struct {
+			title, description, trend, percentage, category string
+		}{
+			{"Leh-Ladakh", "Most popular riding destination this season", "up", "+45%", "destination"},
+			{"Adventure Touring", "Adventure bike sales increasing", "up", "+32%", "trending"},
+			{"Weekend Rides", "Group rides gaining popularity", "up", "+28%", "activity"},
+			{"Vintage Restoration", "Classic bike restoration trending", "stable", "+15%", "hobby"},
+			{"Safety Gear", "Premium riding gear demand rising", "up", "+40%", "gear"},
+		}
+		for _, trend := range trendsData {
+			db.Exec("INSERT INTO biking_trends (title, description, trend, percentage, category) VALUES (?, ?, ?, ?, ?)",
+				trend.title, trend.description, trend.trend, trend.percentage, trend.category)
+		}
+		log.Println("✅ Seeded biking trends")
+	}
+
+	// Seed marketplace categories
+	var catCount int
+	db.QueryRow("SELECT COUNT(*) FROM marketplace_categories").Scan(&catCount)
+	if catCount == 0 {
+		categories := []struct{ name, icon, slug string }{
+			{"Helmets", "🪖", "helmets"},
+			{"Riding Jackets", "🧥", "jackets"},
+			{"Gloves", "🧤", "gloves"},
+			{"Boots", "👢", "boots"},
+			{"Bike Parts", "🔧", "parts"},
+			{"Accessories", "🎒", "accessories"},
+		}
+		for _, cat := range categories {
+			db.Exec("INSERT INTO marketplace_categories (name, icon, slug) VALUES (?, ?, ?)",
+				cat.name, cat.icon, cat.slug)
+		}
+		log.Println("✅ Seeded marketplace categories")
+	}
+
+	// Seed sample advertisements
+	var adCount int
+	db.QueryRow("SELECT COUNT(*) FROM advertisements").Scan(&adCount)
+	if adCount == 0 {
+		ads := []struct {
+			title, imageURL, targetURL, position, advertiser string
+		}{
+			{"Royal Enfield Accessories", "/static/ads/ad1.jpg", "https://royalenfield.com", "sidebar", "Royal Enfield"},
+			{"Premium Riding Gear Sale", "/static/ads/ad2.jpg", "https://example.com/gear", "banner", "RidingGear Pro"},
+			{"Weekend Ride to Leh", "/static/ads/ad3.jpg", "https://example.com/leh-tour", "featured", "Biking Tours India"},
+			{"Helmet Store - 30% OFF", "/static/ads/ad4.jpg", "https://example.com/helmets", "sidebar", "SafeRide Helmets"},
+		}
+		for _, ad := range ads {
+			db.Exec(`INSERT INTO advertisements (title, image_url, target_url, position, advertiser, start_date, end_date, is_active) 
+			         VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now', '+30 days'), 1)`,
+				ad.title, ad.imageURL, ad.targetURL, ad.position, ad.advertiser)
+		}
+		log.Println("✅ Seeded sample advertisements")
+	}
+
+	// Seed sample products
+	var productCount int
+	db.QueryRow("SELECT COUNT(*) FROM products").Scan(&productCount)
+	if productCount == 0 {
+		products := []struct {
+			title, description, category, condition, imageURL, location string
+			price float64
+		}{
+			{"Royal Enfield Helmet", "Premium full-face helmet with DOT certification", "Helmets", "Like New", "/static/logo.png", "Mumbai", 3499},
+			{"Riding Jacket", "Waterproof riding jacket with armor", "Riding Jackets", "New", "/static/logo.png", "Delhi", 5999},
+			{"Bike Cover", "Waterproof bike cover for Royal Enfield", "Accessories", "New", "/static/logo.png", "Bangalore", 899},
+			{"Handlebar Grips", "Premium rubber grips for better control", "Bike Parts", "New", "/static/logo.png", "Pune", 499},
+		}
+		for _, p := range products {
+			db.Exec(`INSERT INTO products (user_id, user_name, title, description, price, category, condition, image_url, location, status) 
+			         VALUES (1, 'Highway Cruizzers Admin', ?, ?, ?, ?, ?, ?, ?, 'available')`,
+				p.title, p.description, p.price, p.category, p.condition, p.imageURL, p.location)
+		}
+		log.Println("✅ Seeded sample products")
+	}
+
+	// Seed sample experiences
+	var expCount int
+	db.QueryRow("SELECT COUNT(*) FROM experiences").Scan(&expCount)
+	if expCount == 0 {
+		experiences := []struct {
+			title, category, description string
+			durationDays, durationNights int
+			price, discountedPrice int
+			maxPeople, minPeople int
+			location, startLocation, endLocation, vehicleType string
+			isFeatured bool
+		}{
+			{"Royal Rajasthan Caravan Tour", "family", "Explore the royal heritage of Rajasthan in a luxury caravan. Visit Jaipur, Jodhpur, Udaipur, and Jaisalmer with complete comfort.", 7, 6, 85000, 75000, 6, 2, "Rajasthan", "Jaipur", "Jaisalmer", "Luxury Caravan", true},
+			{"Kerala Backwaters Caravan", "family", "Experience the serene backwaters of Kerala in a fully-equipped caravan. Perfect for family vacations.", 5, 4, 65000, 55000, 6, 2, "Kerala", "Kochi", "Trivandrum", "Premium Caravan", true},
+			{"Himalayan Circuit", "biker", "Epic bike trip through the Himalayas. Cover Manali, Leh, and Pangong Lake.", 12, 11, 45000, 39999, 15, 4, "Himachal", "Manali", "Leh", "Royal Enfield", true},
+			{"Goa Beach Caravan", "group", "Beach hopping caravan tour across Goa's best beaches. Perfect for groups of friends.", 4, 3, 35000, 29999, 8, 4, "Goa", "North Goa", "South Goa", "Standard Caravan", false},
+			{"Golden Triangle Tour", "family", "Delhi-Agra-Jaipur tour in luxury caravan. Visit Taj Mahal, Amer Fort, and more.", 6, 5, 75000, 65000, 6, 2, "North India", "Delhi", "Jaipur", "Luxury Caravan", true},
+			{"Western Ghats Expedition", "biker", "Thrilling bike ride through the scenic Western Ghats. Includes camping and local experiences.", 5, 4, 28000, 24999, 12, 3, "Karnataka", "Bangalore", "Coorg", "Adventure Bike", false},
+		}
+		for _, exp := range experiences {
+			db.Exec(`INSERT INTO experiences (title, category, description, duration_days, duration_nights, price, discounted_price, max_people, min_people, location, start_location, end_location, vehicle_type, is_featured) 
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				exp.title, exp.category, exp.description, exp.durationDays, exp.durationNights,
+				exp.price, exp.discountedPrice, exp.maxPeople, exp.minPeople, exp.location,
+				exp.startLocation, exp.endLocation, exp.vehicleType, exp.isFeatured)
+		}
+		log.Println("✅ Seeded sample experiences")
+	}
+}
+
+// ==================== MAIN FUNCTION ====================
 
 func main() {
 	initDB()
@@ -1049,6 +1175,168 @@ func main() {
 		})
 	})
 
+	// ==================== EXPERIENCES PAGE ====================
+	
+	// ==================== EXPERIENCES PAGE ====================
+
+app.Get("/experiences", func(c *fiber.Ctx) error {
+    currentUser := getCurrentUser(c)
+    settings := getSiteSettings()  // Make sure this exists
+    bikingTrends := getBikingTrends()
+    sidebarAds := getActiveAds("sidebar")
+    
+    rows, err := db.Query(`
+        SELECT id, title, category, description, duration_days, duration_nights, 
+               price, discounted_price, max_people, min_people, location, 
+               vehicle_type, is_featured, rating, total_reviews, cover_image
+        FROM experiences WHERE is_active = 1 ORDER BY is_featured DESC, created_at DESC
+    `)
+    if err != nil {
+        return c.Status(500).SendString("Error loading experiences")
+    }
+    defer rows.Close()
+    
+    type Experience struct {
+        ID             int
+        Title          string
+        Category       string
+        Description    string
+        DurationDays   int
+        DurationNights int
+        Price          int
+        DiscountedPrice int
+        MaxPeople      int
+        MinPeople      int
+        Location       string
+        VehicleType    string
+        IsFeatured     bool
+        Rating         float64
+        TotalReviews   int
+        CoverImage     string
+    }
+    
+    var experiences []Experience
+    for rows.Next() {
+        var e Experience
+        var coverImage sql.NullString
+        rows.Scan(&e.ID, &e.Title, &e.Category, &e.Description, &e.DurationDays, &e.DurationNights,
+            &e.Price, &e.DiscountedPrice, &e.MaxPeople, &e.MinPeople, &e.Location,
+            &e.VehicleType, &e.IsFeatured, &e.Rating, &e.TotalReviews, &coverImage)
+        if coverImage.Valid {
+            e.CoverImage = coverImage.String
+        }
+        experiences = append(experiences, e)
+    }
+    
+    // Get categories for filter
+    categories := []string{"all", "family", "group", "biker"}
+    
+    return c.Render("experiences", fiber.Map{
+        "Title":         "Travel Experiences - " + settings.SiteName,
+        "CurrentUser":   currentUser,
+        "Experiences":   experiences,
+        "Categories":    categories,
+        "Settings":      settings,  // ← THIS IS CRITICAL - add Settings
+        "BikingTrends":  bikingTrends,
+        "SidebarAds":    sidebarAds,
+        "IsAdmin":       currentUser != nil && currentUser.IsAdmin,
+    })
+})
+
+	app.Get("/experience/:id", func(c *fiber.Ctx) error {
+    id := c.Params("id")
+    currentUser := getCurrentUser(c)
+    settings := getSiteSettings()  // ← Add this
+    bikingTrends := getBikingTrends()
+    sidebarAds := getActiveAds("sidebar")
+    
+    var exp struct {
+        ID             int
+        Title          string
+        Category       string
+        Description    string
+        DurationDays   int
+        DurationNights int
+        Price          int
+        DiscountedPrice int
+        MaxPeople      int
+        MinPeople      int
+        Location       string
+        StartLocation  string
+        EndLocation    string
+        VehicleType    string
+        IsFeatured     bool
+        CoverImage     string
+    }
+    var coverImage sql.NullString
+    err := db.QueryRow(`
+        SELECT id, title, category, description, duration_days, duration_nights, 
+               price, discounted_price, max_people, min_people, location, 
+               start_location, end_location, vehicle_type, is_featured, cover_image
+        FROM experiences WHERE id = ? AND is_active = 1
+    `, id).Scan(&exp.ID, &exp.Title, &exp.Category, &exp.Description, &exp.DurationDays,
+        &exp.DurationNights, &exp.Price, &exp.DiscountedPrice, &exp.MaxPeople, &exp.MinPeople,
+        &exp.Location, &exp.StartLocation, &exp.EndLocation, &exp.VehicleType, &exp.IsFeatured, &coverImage)
+    if err != nil {
+        return c.Redirect("/experiences")
+    }
+    if coverImage.Valid {
+        exp.CoverImage = coverImage.String
+    }
+    
+    itinerary := []map[string]string{
+        {"day": "1", "title": "Arrival & Welcome", "description": "Pickup from airport, welcome dinner, and orientation"},
+        {"day": "2", "title": "City Tour", "description": "Explore local attractions and cultural sites"},
+        {"day": "3", "title": "Adventure Activities", "description": "Optional adventure sports and local experiences"},
+    }
+    
+    included := []string{"Accommodation in caravan", "All meals (breakfast, lunch, dinner)", "Fuel and toll charges", "Professional driver/guide", "24/7 support"}
+    excluded := []string{"Airfare/train tickets", "Personal expenses", "Entry fees to monuments", "Travel insurance"}
+    
+    return c.Render("experience-detail", fiber.Map{
+        "Title":         exp.Title + " - " + settings.SiteName,
+        "CurrentUser":   currentUser,
+        "Experience":    exp,
+        "Itinerary":     itinerary,
+        "Included":      included,
+        "Excluded":      excluded,
+        "Settings":      settings,  // ← ADD THIS
+        "BikingTrends":  bikingTrends,
+        "SidebarAds":    sidebarAds,
+        "IsAdmin":       currentUser != nil && currentUser.IsAdmin,
+    })
+})
+	app.Post("/experience/:id/book", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil {
+			return c.Status(401).SendString("Please login to book")
+		}
+		
+		experienceID := c.Params("id")
+		travelDate := c.FormValue("travel_date")
+		peopleStr := c.FormValue("people")
+		requests := c.FormValue("requests")
+		
+		people, _ := strconv.Atoi(peopleStr)
+		if people < 1 {
+			people = 1
+		}
+		
+		var discountedPrice int
+		db.QueryRow("SELECT discounted_price FROM experiences WHERE id = ?", experienceID).Scan(&discountedPrice)
+		totalPrice := discountedPrice * people
+		
+		_, err := db.Exec(`INSERT INTO experience_bookings (experience_id, user_id, travel_date, number_of_people, total_price, special_requests, contact_name, contact_phone, contact_email, status) 
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+			experienceID, currentUser.ID, travelDate, people, totalPrice, requests, currentUser.Username, currentUser.Phone, currentUser.Email)
+		
+		if err != nil {
+			return c.Status(500).SendString("Booking failed. Please try again.")
+		}
+		
+		return c.SendString(`<div class="p-4 text-emerald-600">✅ Booking request submitted! We'll contact you shortly to confirm.<script>setTimeout(function(){ window.location.href = "/profile"; }, 2000);</script></div>`)
+	})
+
 	// ==================== MARKETPLACE ====================
 	
 	app.Get("/marketplace", func(c *fiber.Ctx) error {
@@ -1059,7 +1347,6 @@ func main() {
 		settings := getSiteSettings()
 		
 		var products []Product
-		
 		var rows *sql.Rows
 		var err error
 		
@@ -1194,58 +1481,58 @@ func main() {
 	})
 
 	// Admin verification approval
-// Admin verification approval
-app.Post("/admin/verify-user/:id", func(c *fiber.Ctx) error {
-    currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).SendString("Access denied")
-    }
-    
-    userID := c.Params("id")
-    action := c.FormValue("action")
-    
-    var status string
-    if action == "approve" {
-        status = "verified"
-        db.Exec("UPDATE users SET is_verified = 1 WHERE id = ?", userID)
-    } else {
-        status = "rejected"
-    }
-    
-    now := time.Now()
-    db.Exec(`UPDATE rider_verifications SET status = ?, verified_at = ?, verified_by = ? WHERE user_id = ?`,
-        status, now, currentUser.ID, userID)
-    
-    return c.Redirect("/admin")
-})
+	app.Post("/admin/verify-user/:id", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
+		}
+		
+		userID := c.Params("id")
+		action := c.FormValue("action")
+		
+		var status string
+		if action == "approve" {
+			status = "verified"
+			db.Exec("UPDATE users SET is_verified = 1 WHERE id = ?", userID)
+		} else {
+			status = "rejected"
+		}
+		
+		now := time.Now()
+		db.Exec(`UPDATE rider_verifications SET status = ?, verified_at = ?, verified_by = ? WHERE user_id = ?`,
+			status, now, currentUser.ID, userID)
+		
+		return c.Redirect("/admin")
+	})
 
-// Admin trends management
-    app.Post("/admin/trends/add", func(c *fiber.Ctx) error {
-      currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).SendString("Access denied")
-    }
-    
-    title := c.FormValue("title")
-    description := c.FormValue("description")
-    trend := c.FormValue("trend")
-    percentage := c.FormValue("percentage")
-    category := c.FormValue("category")
-    
-    db.Exec("INSERT INTO biking_trends (title, description, trend, percentage, category) VALUES (?, ?, ?, ?, ?)",
-        title, description, trend, percentage, category)
-    return c.Redirect("/admin")
-})
+	// Admin trends management
+	app.Post("/admin/trends/add", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
+		}
+		
+		title := c.FormValue("title")
+		description := c.FormValue("description")
+		trend := c.FormValue("trend")
+		percentage := c.FormValue("percentage")
+		category := c.FormValue("category")
+		
+		db.Exec("INSERT INTO biking_trends (title, description, trend, percentage, category) VALUES (?, ?, ?, ?, ?)",
+			title, description, trend, percentage, category)
+		return c.Redirect("/admin")
+	})
 
-app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
-    currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).SendString("Access denied")
-    }
-    id := c.Params("id")
-    db.Exec("DELETE FROM biking_trends WHERE id = ?", id)
-    return c.Redirect("/admin")
-})
+	app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
+		}
+		id := c.Params("id")
+		db.Exec("DELETE FROM biking_trends WHERE id = ?", id)
+		return c.Redirect("/admin")
+	})
+	
 	app.Post("/admin/ads/add", func(c *fiber.Ctx) error {
 		currentUser := getCurrentUser(c)
 		if currentUser == nil || !currentUser.IsAdmin {
@@ -1292,7 +1579,6 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 		return c.Redirect(targetURL)
 	})
 
-	
 	app.Post("/admin/settings", func(c *fiber.Ctx) error {
 		currentUser := getCurrentUser(c)
 		if currentUser == nil || !currentUser.IsAdmin {
@@ -1369,33 +1655,121 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 			ORDER BY id DESC
 		`, currentUser.ID)
 
+		var totalRides, totalLikes, totalCreditsEarned int
+		db.QueryRow("SELECT COUNT(*) FROM rides WHERE user_id = ? AND status = 'approved'", currentUser.ID).Scan(&totalRides)
+		db.QueryRow("SELECT COALESCE(SUM(likes), 0) FROM rides WHERE user_id = ?", currentUser.ID).Scan(&totalLikes)
+		
+		var joinedAt time.Time
+		db.QueryRow("SELECT created_at FROM users WHERE id = ?", currentUser.ID).Scan(&joinedAt)
+		
+		var bio, location string
+		db.QueryRow("SELECT COALESCE(bio, ''), COALESCE(location, '') FROM user_profiles WHERE user_id = ?", currentUser.ID).Scan(&bio, &location)
+		
 		sidebarAds := getActiveAds("sidebar")
 		settings := getSiteSettings()
 		bikingTrends := getBikingTrends()
 
-		return c.Render("index", fiber.Map{
-			"Rides":        rides,
-			"CurrentUser":  currentUser,
-			"IsProfile":    true,
-			"SearchQuery":  "",
-			"IsAdmin":      currentUser.IsAdmin,
-			"BikingTrends": bikingTrends,
-			"SidebarAds":   sidebarAds,
-			"Settings":     settings,
+		return c.Render("profile", fiber.Map{
+			"Rides":              rides,
+			"CurrentUser":        currentUser,
+			"IsProfile":          true,
+			"SearchQuery":        "",
+			"IsAdmin":            currentUser.IsAdmin,
+			"BikingTrends":       bikingTrends,
+			"SidebarAds":         sidebarAds,
+			"Settings":           settings,
+			"TotalRides":         totalRides,
+			"TotalLikes":         totalLikes,
+			"TotalCreditsEarned": totalCreditsEarned,
+			"JoinedAt":           joinedAt,
+			"Bio":                bio,
+			"Location":           location,
+		})
+	})
+
+	app.Get("/profile/edit", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil {
+			return c.Redirect("/login")
+		}
+		
+		var bio, location string
+		db.QueryRow("SELECT COALESCE(bio, ''), COALESCE(location, '') FROM user_profiles WHERE user_id = ?", currentUser.ID).Scan(&bio, &location)
+		
+		settings := getSiteSettings()
+		bikingTrends := getBikingTrends()
+		sidebarAds := getActiveAds("sidebar")
+		
+		return c.Render("profile-edit", fiber.Map{
+			"Title":         "Edit Profile - " + settings.SiteName,
+			"CurrentUser":   currentUser,
+			"Bio":           bio,
+			"Location":      location,
+			"Settings":      settings,
+			"BikingTrends":  bikingTrends,
+			"SidebarAds":    sidebarAds,
+			"IsAdmin":       currentUser.IsAdmin,
 		})
 	})
 
 	app.Post("/profile/update", func(c *fiber.Ctx) error {
 		currentUser := getCurrentUser(c)
 		if currentUser == nil {
-			return c.Status(401).SendString("Please login")
+			return c.Status(401).SendString(`<div class="p-4 text-red-500">Please login</div>`)
 		}
+		
+		username := c.FormValue("username")
 		bikeModel := c.FormValue("bike_model")
 		ridingExp := c.FormValue("riding_exp")
 		avatarURL := c.FormValue("avatar_url")
+		bio := c.FormValue("bio")
+		location := c.FormValue("location")
+		
+		if username != "" {
+			db.Exec("UPDATE users SET username = ? WHERE id = ?", username, currentUser.ID)
+		}
 		db.Exec("UPDATE users SET bike_model = ?, riding_exp = ?, avatar_url = ? WHERE id = ?",
 			bikeModel, ridingExp, avatarURL, currentUser.ID)
-		return c.SendString(`✅ Profile updated!<script>window.location.reload()</script>`)
+		
+		db.Exec(`INSERT INTO user_profiles (user_id, bio, location) VALUES (?, ?, ?) 
+		         ON CONFLICT(user_id) DO UPDATE SET bio = excluded.bio, location = excluded.location`,
+			currentUser.ID, bio, location)
+		
+		return c.SendString(`<div class="p-4 text-emerald-600">✅ Profile updated successfully!<script>setTimeout(function(){ window.location.href = "/profile"; }, 1500);</script></div>`)
+	})
+
+	// Change Password
+	app.Post("/change-password", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil {
+			return c.Status(401).SendString("Please login")
+		}
+		
+		currentPassword := c.FormValue("current_password")
+		newPassword := c.FormValue("new_password")
+		
+		var hash string
+		err := db.QueryRow("SELECT password_hash FROM users WHERE id = ?", currentUser.ID).Scan(&hash)
+		if err != nil {
+			return c.Status(500).SendString("Error verifying password")
+		}
+		
+		if bcrypt.CompareHashAndPassword([]byte(hash), []byte(currentPassword)) != nil {
+			return c.SendString(`<div class="p-2 bg-red-100 text-red-700 rounded text-sm">❌ Current password is incorrect</div>`)
+		}
+		
+		if err := validatePasswordStrength(newPassword); err != nil {
+			return c.SendString(`<div class="p-2 bg-red-100 text-red-700 rounded text-sm">❌ ` + err.Error() + `</div>`)
+		}
+		
+		newHash, _ := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+		
+		_, err = db.Exec("UPDATE users SET password_hash = ? WHERE id = ?", newHash, currentUser.ID)
+		if err != nil {
+			return c.Status(500).SendString(`<div class="p-2 bg-red-100 text-red-700 rounded text-sm">❌ Failed to update password</div>`)
+		}
+		
+		return c.SendString(`<div class="p-2 bg-green-100 text-green-700 rounded text-sm">✅ Password changed successfully! Please login again.</div><script>setTimeout(function(){ window.location.href = "/logout"; }, 2000);</script>`)
 	})
 
 	// ==================== RIDE POSTING ====================
@@ -1782,7 +2156,6 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 		
 		key := ip + ":" + email
 		
-		// Rate limiting check
 		if attempt, exists := loginAttempts[key]; exists {
 			if time.Now().Before(attempt.LockedUntil) {
 				return c.Status(429).SendString(`<div class="p-4 text-red-500 text-center">Too many attempts. Try again later.</div>`)
@@ -1795,7 +2168,6 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 			Scan(&user.ID, &user.Username, &user.Handle, &user.IsAdmin, &user.IsActive, &hash, &user.IsVerified)
 		
 		if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
-			// Record failed attempt
 			if attempt, exists := loginAttempts[key]; exists {
 				attempt.Count++
 				attempt.LastTry = time.Now()
@@ -1820,7 +2192,6 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 			return c.Status(403).SendString(`<div class="p-4 text-red-500 text-center">Account deactivated. Contact support.</div>`)
 		}
 		
-		// Create session token
 		sessionToken, _ := generateSecureToken()
 		expiresAt := time.Now().Add(7 * 24 * time.Hour)
 		_, err = db.Exec(`INSERT INTO sessions (token, user_id, ip_address, user_agent, expires_at) VALUES (?, ?, ?, ?, ?)`,
@@ -1831,7 +2202,6 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 			return c.Status(500).SendString(`<div class="p-4 text-red-500 text-center">Login failed</div>`)
 		}
 		
-		// Set secure cookie
 		c.Cookie(&fiber.Cookie{
 			Name:     "auth_token",
 			Value:    sessionToken,
@@ -1842,7 +2212,6 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 			MaxAge:   7 * 24 * 60 * 60,
 		})
 		
-		// Clear failed attempts
 		delete(loginAttempts, key)
 		
 		db.Exec(`INSERT INTO security_logs (event_type, user_id, ip_address, user_agent) VALUES (?, ?, ?, ?)`,
@@ -1860,12 +2229,10 @@ app.Post("/admin/trends/delete/:id", func(c *fiber.Ctx) error {
 		bikeModel := c.FormValue("bike_model")
 		ridingExp := c.FormValue("riding_exp")
 
-		// Validate email
 		if !isValidEmail(email) {
 			return c.SendString(`<div class="p-4 text-red-500 text-center">Invalid email format</div>`)
 		}
 		
-		// Validate password strength
 		if err := validatePasswordStrength(password); err != nil {
 			return c.SendString(`<div class="p-4 text-red-500 text-center">` + err.Error() + `</div>`)
 		}
