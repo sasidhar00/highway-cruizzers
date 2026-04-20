@@ -22,13 +22,17 @@
                     <p class="text-slate-500 text-sm">Buy & Sell Bike Gear, Accessories & Parts</p>
                 </div>
                 <div class="flex gap-3">
-                    <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-full transition flex items-center gap-2 text-sm font-medium">
-                        <span>🏠</span> Back to Rides
-                    </a>
-                    <button onclick="openSellModal()" class="text-white px-5 py-2 rounded-full transition flex items-center gap-2 text-sm font-medium shadow-md" style="background-color: {{.Settings.PrimaryColor}}">
-                        <span>➕</span> Sell Item
-                    </button>
-                </div>
+    <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-full transition flex items-center gap-2 text-sm font-medium">
+        <span>🏠</span> Back to Rides
+    </a>
+    <!-- ✅ ADD THIS -->
+    <a href="/trip-planner" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-full transition flex items-center gap-2 text-sm font-medium">
+        <span>🗺️</span> Trip Planner
+    </a>
+    <button onclick="openSellModal()" class="text-white px-5 py-2 rounded-full transition flex items-center gap-2 text-sm font-medium shadow-md" style="background-color: {{.Settings.PrimaryColor}}">
+        <span>➕</span> Sell Item
+    </button>
+</div>
             </div>
         </div>
 

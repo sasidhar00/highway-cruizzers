@@ -2,50 +2,379 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Biking News - {{.Settings.SiteName}}</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .news-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .news-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.15);
+        }
+        .category-badge {
+            background: linear-gradient(135deg, #f59e0b, #e85d04);
+        }
+        .sidebar-item:active { background-color: #f1f5f9; }
+        .highway-brand { font-weight: 900; letter-spacing: -2.5px; text-transform: lowercase; }
+        .logo-img { max-height: 50px; width: auto; object-fit: contain; }
+        @media (max-width: 768px) {
+            button, a, .sidebar-item, [onclick] { cursor: pointer; min-height: 44px; }
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
 </head>
-<body class="bg-slate-50">
-    <div class="max-w-7xl mx-auto p-6">
-        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    {{if .Settings.LogoURL}}
-                    <img src="{{.Settings.LogoURL}}" class="h-10 w-auto">
-                    {{else}}
-                    <h1 class="text-2xl font-black" style="color: {{.Settings.PrimaryColor}}">{{.Settings.SiteName}}</h1>
-                    {{end}}
-                    <p class="text-slate-500 text-sm">Latest Biking News</p>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100">
+    <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="closeMobileMenu()"></div>
+    
+    <div class="flex flex-col lg:flex-row max-w-7xl mx-auto min-h-screen relative">
+        
+        <!-- LEFT SIDEBAR -->
+        <header id="sidebar" class="fixed top-0 left-0 w-4/5 max-w-[280px] h-full p-4 border-r border-slate-100 flex flex-col justify-between z-50 bg-white transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:w-64 shadow-xl lg:shadow-none overflow-y-auto">
+            <div>
+                <div class="p-3 mb-4 flex justify-between items-center">
+                    <div>
+                        {{if and .Settings .Settings.LogoURL}}
+                        <img src="{{.Settings.LogoURL}}" alt="{{.Settings.SiteName}}" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                        <h1 class="highway-brand text-2xl" style="color: {{.Settings.PrimaryColor}}; display: none;">{{.Settings.SiteName}}</h1>
+                        {{else}}
+                        <h1 class="highway-brand text-2xl" style="color: #e85d04">{{.Settings.SiteName}}</h1>
+                        {{end}}
+                        <p class="text-[10px] text-slate-400 mt-0.5">by kanams.ai 🏍️</p>
+                    </div>
+                    <button onclick="closeMobileMenu()" class="lg:hidden text-slate-500 text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100">&times;</button>
                 </div>
-                <a href="/" class="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full text-sm">← Back</a>
+                
+                <nav class="space-y-1">
+                    <a href="/" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🏠 Home</a>
+                    <a href="/experiences" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🚐 Travel Experiences</a>
+                    <a href="/marketplace" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🛍️ Marketplace</a>
+                    <a href="/search" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🔍 Find Rides</a>
+                    <a href="/news" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">📰 Biking News</a>
+                    <a href="/profile" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">👤 My Profile</a>
+                    {{if .IsAdmin}}<a href="/admin" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium text-amber-600">👑 Admin Dashboard</a>{{end}}
+                </nav>
+                <button onclick="{{if .CurrentUser}}document.querySelector('textarea[name=content]')?.focus(){{else}}showLoginPrompt(){{end}}; closeMobileMenu()" class="w-full text-white font-bold py-3 rounded-full mt-6 shadow-md transition active:scale-95" style="background-color: {{.Settings.PrimaryColor}}">Post Ride</button>
             </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {{range .News}}
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div class="h-2" style="background: linear-gradient(90deg, {{$.Settings.PrimaryColor}}, {{$.Settings.SecondaryColor}})"></div>
-                <div class="p-5">
-                    <span class="text-xs px-2 py-1 rounded-full bg-blue-100">{{.Category}}</span>
-                    <h2 class="text-xl font-bold mt-2 mb-2">{{.Title}}</h2>
-                    <p class="text-slate-600 text-sm">{{.Content}}</p>
-                    <div class="flex justify-between items-center mt-4 pt-3 border-t">
-                        <span class="text-xs text-slate-400">{{.Timestamp}}</span>
-                        <button onclick="likeNews({{.ID}}, this)" class="flex items-center gap-1 text-slate-400 hover:text-red-500">❤️ <span>{{.Likes}}</span></button>
+            <div id="sidebar-bottom" class="mt-4">
+                {{if .CurrentUser}}
+                <div class="flex items-center gap-3 p-3 hover:bg-slate-100 rounded-xl cursor-pointer transition">
+                    {{if .CurrentUser.AvatarURL}}<img src="{{.CurrentUser.AvatarURL}}" class="w-10 h-10 rounded-2xl object-cover flex-shrink-0">{{else}}<div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0" style="background: linear-gradient(135deg, {{.Settings.PrimaryColor}}, {{.Settings.SecondaryColor}})">🏍️</div>{{end}}
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-sm truncate">{{.CurrentUser.Username}}</div>
+                        <div class="text-slate-500 text-xs truncate">@{{.CurrentUser.Handle}}</div>
+                        <div class="text-amber-600 text-xs font-medium">₹{{.CurrentUser.Credits}} credits</div>
+                        {{if .CurrentUser.IsPremium}}<div class="text-xs font-bold text-amber-600">🏍️ PREMIUM RIDER</div>{{end}}
+                    </div>
+                    <button hx-post="/logout" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="text-xs font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded-lg">Logout</button>
+                </div>
+                {{else}}
+                <div class="p-4 border-t border-slate-100">
+                    <div class="flex border-b mb-4">
+                        <button onclick="switchAuthTab(0)" id="tab-login" class="flex-1 font-bold text-sm pb-2 border-b-2" style="border-color: {{.Settings.PrimaryColor}}; color: {{.Settings.PrimaryColor}}">Login</button>
+                        <button onclick="switchAuthTab(1)" id="tab-signup" class="flex-1 font-bold text-sm pb-2 text-slate-400">Join Ride</button>
+                    </div>
+                    <div id="auth-login">
+                        <form hx-post="/login" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
+                            <input type="email" name="email" placeholder="Email" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="password" name="password" placeholder="Password" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <button type="submit" class="w-full text-white font-bold py-3 rounded-xl transition text-sm" style="background-color: {{.Settings.PrimaryColor}}">Login</button>
+                        </form>
+                        <div class="text-center mt-3"><a href="/forgot-password" class="text-xs hover:underline" style="color: {{.Settings.PrimaryColor}}">Forgot password?</a></div>
+                    </div>
+                    <div id="auth-signup" class="hidden">
+                        <form hx-post="/signup" hx-target="#sidebar-bottom" hx-swap="innerHTML" class="space-y-3">
+                            <input type="text" name="username" placeholder="Full Name" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="text" name="handle" placeholder="Handle (no @)" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="email" name="email" placeholder="Email" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="tel" name="phone" placeholder="Mobile Number" required pattern="[0-9]{10}" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <input type="text" name="bike_model" placeholder="Your Bike Model" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <select name="riding_exp" class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                                <option value="">Riding Experience</option>
+                                <option value="Beginner (0-1 year)">Beginner (0-1 year)</option>
+                                <option value="Intermediate (1-3 years)">Intermediate (1-3 years)</option>
+                                <option value="Experienced (3-5 years)">Experienced (3-5 years)</option>
+                                <option value="Expert (5+ years)">Expert (5+ years)</option>
+                            </select>
+                            <input type="password" name="password" placeholder="Password (min 6 chars)" required class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:border-[#e85d04] outline-none">
+                            <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition text-sm">Join the Cruizzers</button>
+                        </form>
                     </div>
                 </div>
+                {{end}}
             </div>
-            {{else}}
-            <div class="col-span-3 text-center py-12">No news available</div>
+        </header>
+
+        <button onclick="toggleMobileMenu()" class="lg:hidden fixed bottom-4 left-4 z-30 text-white p-3 rounded-full shadow-lg active:scale-95 transition" style="background-color: {{.Settings.PrimaryColor}}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 w-full min-w-0 pb-20 lg:pb-0">
+            <!-- Hero Banner -->
+            <div class="relative overflow-hidden bg-gradient-to-r from-orange-600 to-red-600 text-white">
+                <div class="absolute inset-0 opacity-20">
+                    <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                        <path fill="white" fill-opacity="0.5" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                    </svg>
+                </div>
+                <div class="relative px-6 py-12 md:py-16 text-center">
+                    <div class="text-5xl mb-3">🏍️📰</div>
+                    <h1 class="text-3xl md:text-4xl font-bold mb-2">Biking News Hub</h1>
+                    <p class="text-orange-100 max-w-2xl mx-auto">Latest motorcycle news, reviews, and events from India</p>
+                </div>
+            </div>
+
+            <!-- News Grid -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {{range .News}}
+                    <div class="news-card bg-white rounded-2xl shadow-lg overflow-hidden group">
+                        <div class="relative h-48 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+                            <span class="text-6xl">
+                                {{if eq .Category "bikes"}}🏍️
+                                {{else if eq .Category "electric"}}⚡
+                                {{else if eq .Category "events"}}🏁
+                                {{else if eq .Category "reviews"}}⭐
+                                {{else if eq .Category "safety"}}🛡️
+                                {{else}}📰{{end}}
+                            </span>
+                            <div class="absolute top-3 left-3">
+                                <span class="category-badge text-white text-xs font-bold px-3 py-1 rounded-full">
+                                    {{if eq .Category "bikes"}}🚀 New Launch
+                                    {{else if eq .Category "safety"}}🛡️ Safety
+                                    {{else if eq .Category "electric"}}⚡ Electric
+                                    {{else if eq .Category "events"}}🏁 Events
+                                    {{else if eq .Category "reviews"}}⭐ Review
+                                    {{else}}📰 News{{end}}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs text-slate-400">Highway Cruizzers</span>
+                                <span class="text-xs text-slate-300">•</span>
+                                <span class="text-xs text-slate-400">{{.Timestamp}}</span>
+                            </div>
+                            <h2 class="text-xl font-bold text-slate-900 mb-2 line-clamp-2">{{.Title}}</h2>
+                            <p class="text-slate-600 text-sm mb-4 line-clamp-3">{{.Content}}</p>
+                            <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+                                <button onclick="likeNews({{.ID}}, this)" class="flex items-center gap-1 text-slate-400 hover:text-red-500 transition">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    </svg>
+                                    <span class="text-sm font-medium">{{.Likes}}</span>
+                                </button>
+<button onclick="shareNews('{{.Title}}', '{{.Content}}', window.location.href)" class="flex items-center gap-1 text-slate-400 hover:text-blue-500 transition">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+    </svg>
+    <span class="text-sm">Share</span>
+</button>
+                            </div>
+                        </div>
+                    </div>
+                    {{else}}
+                    <div class="col-span-3 text-center py-12">
+                        <div class="text-6xl mb-4">📰</div>
+                        <h3 class="text-xl font-semibold text-slate-600 mb-2">No news available</h3>
+                        <p class="text-slate-400">Check back later for latest biking news!</p>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR -->
+        <aside class="hidden lg:block w-80 p-4 sticky top-0 h-screen overflow-y-auto">
+            <div class="bg-slate-100 rounded-full px-4 py-2 flex items-center gap-2 mb-4">
+                <span class="text-slate-400">🔍</span>
+                <form action="/search" method="GET" class="flex-1">
+                    <input type="text" name="q" placeholder="Search news..." class="bg-transparent outline-none text-sm w-full">
+                </form>
+            </div>
+
+            <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 mb-4 border border-amber-200">
+                <h2 class="font-extrabold text-base mb-3">🔥 Trending Topics</h2>
+                <div class="space-y-2">
+                    <div class="text-sm">🏍️ Royal Enfield Guerrilla 450</div>
+                    <div class="text-sm">⚡ Ola Electric Motorcycle</div>
+                    <div class="text-sm">🏁 MotoGP India 2025</div>
+                    <div class="text-sm">⭐ TVS Apache RTR 310</div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-[#e85d04]/10 to-[#d00000]/10 rounded-2xl p-4 border border-[#e85d04]/30">
+                <h2 class="font-extrabold text-base mb-2">📧 Get News Alerts</h2>
+                <p class="text-xs text-slate-600 mb-3">Get weekly biking news delivered to your inbox</p>
+                <form id="newsletterForm" onsubmit="subscribeNewsletter(event)" class="flex gap-2">
+                    <input type="email" placeholder="Your email" required class="flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <button type="submit" class="text-white px-3 py-2 rounded-lg text-sm" style="background-color: {{.Settings.PrimaryColor}}">Subscribe</button>
+                </form>
+                <div id="newsletterResult" class="mt-2 text-xs"></div>
+            </div>
+            
+            {{if .SidebarAds}}
+            <div class="space-y-3 mt-4">
+                {{range .SidebarAds}}
+                <a href="/ad/click/{{.ID}}" target="_blank" class="block">
+                    {{if .ImageURL}}
+                    <img src="{{.ImageURL}}" alt="{{.Title}}" class="w-full h-32 object-cover rounded-xl">
+                    {{else}}
+                    <div class="w-full h-32 bg-gray-200 rounded-xl flex items-center justify-center">{{.Title}}</div>
+                    {{end}}
+                </a>
+                {{end}}
+            </div>
             {{end}}
-        </div>
+        </aside>
+    </div>
+
+    <div class="text-center py-4 border-t border-slate-100 bg-white w-full">
+        <p class="text-xs text-slate-400">Made in India 🇮🇳 with ❤️ by <a href="https://kanams.ai" target="_blank" class="hover:underline font-medium" style="color: {{.Settings.PrimaryColor}}">kanams.ai</a> | Ride Free, Ride Safe 🏍️</p>
     </div>
 
     <script>
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full'); sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden'); document.body.classList.add('mobile-menu-open');
+            } else { closeMobileMenu(); }
+        }
+        
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.add('-translate-x-full'); sidebar.classList.remove('translate-x-0');
+            overlay.classList.add('hidden'); document.body.classList.remove('mobile-menu-open');
+        }
+        
+        window.addEventListener('resize', function() { if (window.innerWidth >= 1024) closeMobileMenu(); });
+
         function likeNews(id, btn) {
-            fetch('/news/like/'+id,{method:'POST'}).then(res=>res.text()).then(likes=>{btn.querySelector('span').textContent=likes;});
+            fetch('/news/like/' + id, { method: 'POST' })
+                .then(res => res.text())
+                .then(likes => {
+                    btn.querySelector('span').textContent = likes;
+                    btn.classList.add('text-red-500');
+                });
+        }
+
+function shareNews(title, content, url) {
+    // For mobile devices with native share (requires HTTPS)
+    if (navigator.share && window.location.protocol === 'https:') {
+        navigator.share({
+            title: title,
+            text: content || 'Check out this biking news on Highway Cruizzers!',
+            url: url || window.location.href
+        }).catch(err => {
+            console.log('Share cancelled:', err);
+            fallbackShare(title, url);
+        });
+    } else {
+        // Fallback for HTTP or desktop browsers
+        fallbackShare(title, url);
+    }
+}
+
+function fallbackShare(title, url) {
+    const shareText = `${title}\n\nRead more: ${url || window.location.href}`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(shareText).then(() => {
+        // Show temporary success message
+        showToast('✅ Link copied to clipboard! Share it with your friends.');
+    }).catch(() => {
+        // If clipboard fails, show prompt
+        prompt('📋 Copy this link and share:', shareText);
+    });
+}
+
+function showToast(message) {
+    // Create toast element if it doesn't exist
+    let toast = document.getElementById('shareToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'shareToast';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 14px;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        `;
+        document.body.appendChild(toast);
+    }
+    
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+    }, 2000);
+}
+
+        function subscribeNewsletter(event) {
+            event.preventDefault();
+            const email = event.target.querySelector('input[type="email"]').value;
+            const resultDiv = document.getElementById('newsletterResult');
+            
+            fetch('/newsletter/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'email=' + encodeURIComponent(email)
+            })
+            .then(res => res.text())
+            .then(data => {
+                resultDiv.innerHTML = '<div class="text-green-600">✅ ' + data + '</div>';
+                event.target.reset();
+                setTimeout(() => { resultDiv.innerHTML = ''; }, 3000);
+            })
+            .catch(err => {
+                resultDiv.innerHTML = '<div class="text-green-600">✅ Subscribed! (Feature coming soon)</div>';
+                event.target.reset();
+            });
+        }
+
+        function showLoginPrompt() { alert("🔑 Please login to continue"); }
+        
+        function switchAuthTab(n) {
+            const loginDiv = document.getElementById('auth-login'), signupDiv = document.getElementById('auth-signup');
+            const loginTab = document.getElementById('tab-login'), signupTab = document.getElementById('tab-signup');
+            if (n === 0) { 
+                loginDiv.classList.remove('hidden'); 
+                signupDiv.classList.add('hidden'); 
+                loginTab.classList.add('border-b-2'); 
+                signupTab.classList.remove('border-b-2'); 
+            } else { 
+                loginDiv.classList.add('hidden'); 
+                signupDiv.classList.remove('hidden'); 
+                signupTab.classList.add('border-b-2'); 
+                loginTab.classList.remove('border-b-2'); 
+            }
         }
     </script>
 </body>

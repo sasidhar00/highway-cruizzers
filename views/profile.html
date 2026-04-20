@@ -63,6 +63,7 @@
                 
                 <nav class="space-y-1">
                     <a href="/" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🏠 Home</a>
+    <a href="/trip-planner" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🗺️ Trip Planner</a>
                     <a href="/marketplace" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🛍️ Marketplace</a>
                     <a href="/search" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🔍 Find Rides</a>
                     <a href="/news" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">📰 Biking News</a>
@@ -134,6 +135,35 @@
 
         <!-- MAIN CONTENT - PROFILE PAGE -->
         <main class="flex-1 w-full min-w-0 pb-20 lg:pb-0">
+            
+            <!-- Success/Error Messages -->
+            {{if .SuccessMessage}}
+            <div class="mx-4 mt-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-sm" role="alert">
+                <div class="flex items-center">
+                    <span class="text-xl mr-2">✅</span>
+                    <span>{{.SuccessMessage}}</span>
+                </div>
+            </div>
+            {{end}}
+            
+            {{if .ErrorMessage}}
+            <div class="mx-4 mt-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm" role="alert">
+                <div class="flex items-center">
+                    <span class="text-xl mr-2">❌</span>
+                    <span>{{.ErrorMessage}}</span>
+                </div>
+            </div>
+            {{end}}
+            
+            {{if .BookingSuccess}}
+            <div class="mx-4 mt-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-sm" role="alert">
+                <div class="flex items-center">
+                    <span class="text-xl mr-2">✅</span>
+                    <span>Booking request submitted! We'll contact you shortly to confirm.</span>
+                </div>
+            </div>
+            {{end}}
+            
             <!-- Profile Cover -->
             <div class="profile-cover relative"></div>
             
@@ -180,10 +210,11 @@
 
                 <!-- Tabs -->
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="flex border-b">
-                        <button onclick="showTab('rides')" id="tab-rides-btn" class="px-6 py-3 font-semibold tab-active">📋 My Rides</button>
-                        <button onclick="showTab('activity')" id="tab-activity-btn" class="px-6 py-3 font-semibold tab-inactive">📊 Recent Activity</button>
-                        <button onclick="showTab('settings')" id="tab-settings-btn" class="px-6 py-3 font-semibold tab-inactive">⚙️ Settings</button>
+                    <div class="flex border-b overflow-x-auto">
+                        <button onclick="showTab('rides')" id="tab-rides-btn" class="px-6 py-3 font-semibold tab-active whitespace-nowrap">📋 My Rides</button>
+                        <button onclick="showTab('bookings')" id="tab-bookings-btn" class="px-6 py-3 font-semibold tab-inactive whitespace-nowrap">📅 My Bookings</button>
+                        <button onclick="showTab('activity')" id="tab-activity-btn" class="px-6 py-3 font-semibold tab-inactive whitespace-nowrap">📊 Recent Activity</button>
+                        <button onclick="showTab('settings')" id="tab-settings-btn" class="px-6 py-3 font-semibold tab-inactive whitespace-nowrap">⚙️ Settings</button>
                     </div>
 
                     <!-- My Rides Tab -->
@@ -207,6 +238,58 @@
                             {{end}}
                         {{else}}
                             <div class="p-8 text-center text-slate-400"><div class="text-4xl mb-2">🏍️</div><p>No rides posted yet</p><a href="/" class="mt-2 inline-block text-sm" style="color: {{$.Settings.PrimaryColor}}">Post your first ride →</a></div>
+                        {{end}}
+                    </div>
+
+                    <!-- My Bookings Tab -->
+                    <div id="bookings-tab" class="hidden divide-y divide-slate-100">
+                        {{if .Bookings}}
+                            {{range .Bookings}}
+                            <div class="p-4 hover:bg-slate-50 transition">
+                                <div class="flex gap-4">
+                                    <div class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                                        {{if .CoverImage}}
+                                        <img src="{{.CoverImage}}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/80x80/e2e8f0/black?text=Tour'">
+                                        {{else}}
+                                        <div class="w-full h-full flex items-center justify-center text-2xl">🚐</div>
+                                        {{end}}
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex flex-wrap justify-between items-start gap-2">
+                                            <h3 class="font-bold text-slate-900">{{.Title}}</h3>
+                                            <span class="text-lg font-bold text-orange-600">₹{{.TotalPrice}}</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-3 mt-1 text-xs text-slate-500">
+                                            <span class="flex items-center gap-1">📅 {{.TravelDate}}</span>
+                                            <span class="flex items-center gap-1">👥 {{.NumberOfPeople}} people</span>
+                                            <span class="flex items-center gap-1">🕐 Booked on {{.CreatedAt}}</span>
+                                        </div>
+                                        <div class="mt-2">
+                                            {{if eq .Status "pending"}}
+                                            <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700">⏳ Pending Confirmation</span>
+                                            {{else if eq .Status "confirmed"}}
+                                            <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">✅ Confirmed</span>
+                                            {{else if eq .Status "cancelled"}}
+                                            <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">❌ Cancelled</span>
+                                            {{else if eq .Status "completed"}}
+                                            <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">🏁 Completed</span>
+                                            {{end}}
+                                        </div>
+                                        {{if .SpecialRequests}}
+                                        <div class="mt-2 text-xs text-slate-400 bg-slate-50 p-2 rounded">
+                                            <span class="font-medium">Special Requests:</span> {{.SpecialRequests}}
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+                            {{end}}
+                        {{else}}
+                            <div class="p-8 text-center text-slate-400">
+                                <div class="text-4xl mb-2">📅</div>
+                                <p>No bookings yet</p>
+                                <a href="/experiences" class="mt-2 inline-block text-sm" style="color: {{$.Settings.PrimaryColor}}">Browse Experiences →</a>
+                            </div>
                         {{end}}
                     </div>
 
@@ -291,16 +374,25 @@
 
         function showTab(tabName) {
             document.getElementById('rides-tab').classList.add('hidden');
+            document.getElementById('bookings-tab').classList.add('hidden');
             document.getElementById('activity-tab').classList.add('hidden');
             document.getElementById('settings-tab').classList.add('hidden');
             document.getElementById(tabName + '-tab').classList.remove('hidden');
-            const btns = ['rides', 'activity', 'settings'];
+            
+            const btns = ['rides', 'bookings', 'activity', 'settings'];
             btns.forEach(btn => {
                 const el = document.getElementById('tab-' + btn + '-btn');
-                if (el) { el.classList.remove('tab-active'); el.classList.add('tab-inactive'); }
+                if (el) { 
+                    el.classList.remove('tab-active'); 
+                    el.classList.add('tab-inactive'); 
+                }
             });
+            
             const activeBtn = document.getElementById('tab-' + tabName + '-btn');
-            if (activeBtn) { activeBtn.classList.add('tab-active'); activeBtn.classList.remove('tab-inactive'); }
+            if (activeBtn) { 
+                activeBtn.classList.add('tab-active'); 
+                activeBtn.classList.remove('tab-inactive'); 
+            }
         }
 
         function showChangePassword() { document.getElementById('passwordModal').classList.remove('hidden'); document.getElementById('passwordModal').classList.add('flex'); }

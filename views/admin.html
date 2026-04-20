@@ -63,6 +63,9 @@
             <button onclick="showTab('trends')" id="btn-trends" class="tab-inactive px-4 py-2 font-semibold transition">📈 Trends</button>
             <button onclick="showTab('ads')" id="btn-ads" class="tab-inactive px-4 py-2 font-semibold transition">📢 Ads</button>
             <button onclick="showTab('marketplace')" id="btn-marketplace" class="tab-inactive px-4 py-2 font-semibold transition">🛍️ Marketplace</button>
+            <button onclick="showTab('experiences')" id="btn-experiences" class="tab-inactive px-4 py-2 font-semibold transition">🏕️ Experiences</button>
+            <!-- Add this button to tabs section -->
+<button onclick="showTab('poi')" id="btn-poi" class="tab-inactive px-4 py-2 font-semibold transition">📍 POI Management</button>
             <button onclick="showTab('settings')" id="btn-settings" class="tab-inactive px-4 py-2 font-semibold transition">⚙️ Settings</button>
         </div>
 
@@ -254,6 +257,278 @@
             </div>
         </div>
 
+<!-- Experiences Tab -->
+<div id="tab-experiences" class="tab-content hidden">
+    <div class="bg-white rounded-xl shadow-sm">
+        <div class="p-4 border-b flex justify-between items-center">
+            <span class="font-bold">🏕️ Travel Experiences & Caravan Tours</span>
+            <button onclick="openExperienceModal()" class="text-white px-3 py-1 rounded" style="background-color: {{.Settings.PrimaryColor}}">+ Add Experience</button>
+        </div>
+        
+        {{if .AllExperiences}}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="p-3 text-left">ID</th>
+                            <th class="p-3 text-left">Title</th>
+                            <th class="p-3 text-left">Category</th>
+                            <th class="p-3 text-left">Price</th>
+                            <th class="p-3 text-left">Discounted</th>
+                            <th class="p-3 text-left">Duration</th>
+                            <th class="p-3 text-left">Max People</th>
+                            <th class="p-3 text-left">Status</th>
+                            <th class="p-3 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .AllExperiences}}
+                        <tr class="border-t hover:bg-slate-50">
+                            <td class="p-3 text-sm">{{.ID}}</td>
+                            <td class="p-3">
+                                <div class="font-medium">{{.Title}}</div>
+                                <div class="text-xs text-slate-400 truncate max-w-xs">{{.Description}}</div>
+                            </td>
+                            <td class="p-3">
+                                <span class="inline-flex px-2 py-1 text-xs rounded-full 
+                                    {{if eq .Category "family"}}bg-green-100 text-green-700
+                                    {{else if eq .Category "group"}}bg-blue-100 text-blue-700
+                                    {{else}}bg-orange-100 text-orange-700{{end}}">
+                                    {{if eq .Category "family"}}🏠 Family
+                                    {{else if eq .Category "group"}}👥 Group
+                                    {{else}}🏍️ Biker{{end}}
+                                </span>
+                            </td>
+                            <td class="p-3 text-sm">₹{{.Price}}</td>
+                            <td class="p-3 text-sm font-bold text-orange-600">₹{{.DiscountedPrice}}</td>
+                            <td class="p-3 text-sm">{{.DurationDays}}D/{{.DurationNights}}N</td>
+                            <td class="p-3 text-sm">{{.MaxPeople}}</td>
+                            <td class="p-3">
+                                <span class="inline-flex px-2 py-1 text-xs rounded-full {{if .IsActive}}bg-green-100 text-green-700{{else}}bg-red-100 text-red-700{{end}}">
+                                    {{if .IsActive}}Active{{else}}Inactive{{end}}
+                                </span>
+                                {{if .IsFeatured}}
+                                <span class="inline-flex ml-1 px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">🔥 Featured</span>
+                                {{end}}
+                            </td>
+                            <td class="p-3">
+                                <div class="flex gap-2">
+                                    <button onclick="editExperience({{.ID}})" class="text-blue-600 hover:text-blue-800 text-sm">✏️ Edit</button>
+                                    <button onclick="toggleExperienceStatus({{.ID}})" class="text-amber-600 hover:text-amber-800 text-sm">
+                                        {{if .IsActive}}🔴 Disable{{else}}🟢 Enable{{end}}
+                                    </button>
+                                    <button onclick="toggleExperienceFeatured({{.ID}})" class="text-purple-600 hover:text-purple-800 text-sm">
+                                        {{if .IsFeatured}}⭐ Unfeature{{else}}🔥 Feature{{end}}
+                                    </button>
+                                    <button onclick="deleteExperience({{.ID}})" class="text-red-600 hover:text-red-800 text-sm">🗑️ Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        {{else}}
+            <div class="p-8 text-center text-slate-400">No experiences added yet</div>
+        {{end}}
+    </div>
+</div>
+<!-- POI Management Tab -->
+<div id="tab-poi" class="tab-content hidden">
+    <div class="bg-white rounded-xl shadow-sm">
+        <div class="p-4 border-b flex justify-between items-center">
+            <span class="font-bold">📍 Points of Interest (Hotels, Restaurants, Service Centers)</span>
+            <button onclick="openPOIModal()" class="text-white px-3 py-1 rounded" style="background-color: {{.Settings.PrimaryColor}}">+ Add Location</button>
+        </div>
+        
+        {{if .AllPOIs}}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="p-3 text-left">ID</th>
+                            <th class="p-3 text-left">Name</th>
+                            <th class="p-3 text-left">Type</th>
+                            <th class="p-3 text-left">Location</th>
+                            <th class="p-3 text-left">Discount</th>
+                            <th class="p-3 text-left">Partner</th>
+                            <th class="p-3 text-left">Status</th>
+                            <th class="p-3 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .AllPOIs}}
+                        <tr class="border-t hover:bg-slate-50">
+                            <td class="p-3 text-sm">{{.ID}}</td>
+                            <td class="p-3 font-medium">{{.Name}}</td>
+                            <td class="p-3">
+                                <span class="inline-flex px-2 py-1 text-xs rounded-full 
+                                    {{if eq .Type "hotel"}}bg-blue-100 text-blue-700
+                                    {{else if eq .Type "restaurant"}}bg-green-100 text-green-700
+                                    {{else if eq .Type "relax_zone"}}bg-purple-100 text-purple-700
+                                    {{else if eq .Type "service_center"}}bg-orange-100 text-orange-700
+                                    {{else}}bg-gray-100 text-gray-700{{end}}">
+                                    {{if eq .Type "hotel"}}🏨 Hotel
+                                    {{else if eq .Type "restaurant"}}🍽️ Restaurant
+                                    {{else if eq .Type "relax_zone"}}🧘 Relax Zone
+                                    {{else if eq .Type "service_center"}}🔧 Service Center
+                                    {{else}}⚡ Charging Point{{end}}
+                                </span>
+                            </td>
+                            <td class="p-3 text-sm">{{.City}}, {{.State}}</td>
+                            <td class="p-3 text-sm font-bold text-green-600">{{if .DiscountPercent}}{{.DiscountPercent}}%{{else}}-{{end}}</td>
+                            <td class="p-3">{{if .IsPartner}}✅ Yes{{else}}❌ No{{end}}</td>
+                            <td class="p-3">
+                                <span class="inline-flex px-2 py-1 text-xs rounded-full {{if .IsActive}}bg-green-100 text-green-700{{else}}bg-red-100 text-red-700{{end}}">
+                                    {{if .IsActive}}Active{{else}}Inactive{{end}}
+                                </span>
+                            </td>
+                            <td class="p-3">
+                                <div class="flex gap-2">
+                                    <button onclick="editPOI({{.ID}})" class="text-blue-600 hover:text-blue-800 text-sm">✏️ Edit</button>
+                                    <button onclick="togglePOIStatus({{.ID}})" class="text-amber-600 hover:text-amber-800 text-sm">
+                                        {{if .IsActive}}🔴 Disable{{else}}🟢 Enable{{end}}
+                                    </button>
+                                    <button onclick="deletePOI({{.ID}})" class="text-red-600 hover:text-red-800 text-sm">🗑️ Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        {{else}}
+            <div class="p-8 text-center text-slate-400">No locations added yet</div>
+        {{end}}
+    </div>
+</div>
+
+<!-- POI Modal -->
+<div id="poiModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" onclick="closePOIModalOnOutside(event)">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-slate-100 p-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold" id="poiModalTitle">Add New Location</h3>
+            <button onclick="closePOIModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <form id="poiForm" onsubmit="submitPOIForm(event)">
+                <input type="hidden" id="poi_id" name="id" value="">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                        <input type="text" id="poi_name" name="name" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Type *</label>
+                        <select id="poi_type" name="type" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                            <option value="hotel">🏨 Hotel</option>
+                            <option value="restaurant">🍽️ Restaurant</option>
+                            <option value="relax_zone">🧘 Relax Zone</option>
+                            <option value="service_center">🔧 Service Center</option>
+                            <option value="charging_point">⚡ Charging Point</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                        <select id="poi_category" name="category" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                            <option value="luxury">Luxury</option>
+                            <option value="budget">Budget</option>
+                            <option value="mid-range">Mid-Range</option>
+                            <option value="cafe">Cafe</option>
+                            <option value="dhaba">Dhaba</option>
+                            <option value="spa">Spa</option>
+                            <option value="yoga">Yoga</option>
+                            <option value="bike">Bike Service</option>
+                            <option value="multi-brand">Multi-Brand</option>
+                            <option value="electric">Electric</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Latitude *</label>
+                        <input type="number" step="any" id="poi_latitude" name="latitude" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                        <p class="text-xs text-slate-400 mt-1">e.g., 28.6139 for Delhi</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Longitude *</label>
+                        <input type="number" step="any" id="poi_longitude" name="longitude" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                        <p class="text-xs text-slate-400 mt-1">e.g., 77.2090 for Delhi</p>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                        <input type="text" id="poi_address" name="address" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">City</label>
+                        <input type="text" id="poi_city" name="city" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">State</label>
+                        <input type="text" id="poi_state" name="state" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                        <input type="text" id="poi_phone" name="phone" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Price Range</label>
+                        <select id="poi_price_range" name="price_range" class="w-full px-4 py-2 border rounded-lg">
+                            <option value="₹">₹ (Budget)</option>
+                            <option value="₹₹">₹₹ (Moderate)</option>
+                            <option value="₹₹₹">₹₹₹ (Expensive)</option>
+                            <option value="₹₹₹₹">₹₹₹₹ (Luxury)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Discount %</label>
+                        <input type="number" id="poi_discount" name="discount_percentage" value="0" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Rating</label>
+                        <input type="number" step="0.1" id="poi_rating" name="rating" value="0" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="poi_is_partner" name="is_partner" value="true">
+                            <span class="text-sm font-medium text-slate-700">🏷️ Partner Location (offers discounts to our users)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="poi_is_active" name="is_active" value="true" checked>
+                            <span class="text-sm font-medium text-slate-700">✅ Active (visible to users)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Offer Details</label>
+                        <textarea id="poi_offer_details" name="offer_details" rows="2" class="w-full px-4 py-2 border rounded-lg" placeholder="Special offer description for partner locations..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closePOIModal()" class="flex-1 px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
+                    <button type="submit" class="flex-1 text-white px-4 py-2 rounded-lg hover:opacity-90" style="background-color: {{.Settings.PrimaryColor}}">Save Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
         <!-- Settings Tab -->
         <div id="tab-settings" class="tab-content hidden">
             <div class="bg-white rounded-xl shadow-sm p-6">
@@ -346,6 +621,121 @@
             </form>
         </div>
     </div>
+    <!-- Experience Modal - Add/Edit -->
+<div id="experienceModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" onclick="closeExperienceModalOnOutside(event)">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-slate-100 p-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold" id="experienceModalTitle">Add New Experience</h3>
+            <button onclick="closeExperienceModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <form id="experienceForm" onsubmit="submitExperienceForm(event)">
+                <input type="hidden" id="experience_id" name="id" value="">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Title *</label>
+                        <input type="text" id="exp_title" name="title" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Description *</label>
+                        <textarea id="exp_description" name="description" rows="4" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Category *</label>
+                        <select id="exp_category" name="category" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                            <option value="family">🏠 Family Caravan</option>
+                            <option value="group">👥 Group Tour</option>
+                            <option value="biker">🏍️ Biker Expedition</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Vehicle Type *</label>
+                        <select id="exp_vehicle_type" name="vehicle_type" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                            <option value="Luxury Caravan">🚐 Luxury Caravan</option>
+                            <option value="Premium Caravan">✨ Premium Caravan</option>
+                            <option value="Standard Caravan">🏠 Standard Caravan</option>
+                            <option value="Royal Enfield">🏍️ Royal Enfield</option>
+                            <option value="Adventure Bike">🏔️ Adventure Bike</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Duration (Days)</label>
+                        <input type="number" id="exp_duration_days" name="duration_days" value="5" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Duration (Nights)</label>
+                        <input type="number" id="exp_duration_nights" name="duration_nights" value="4" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Original Price (₹)</label>
+                        <input type="number" id="exp_price" name="price" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Discounted Price (₹)</label>
+                        <input type="number" id="exp_discounted_price" name="discounted_price" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Max People</label>
+                        <input type="number" id="exp_max_people" name="max_people" value="6" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Min People</label>
+                        <input type="number" id="exp_min_people" name="min_people" value="2" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                        <input type="text" id="exp_location" name="location" placeholder="e.g., Rajasthan" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Cover Image URL</label>
+                        <input type="text" id="exp_cover_image" name="cover_image" placeholder="https://..." class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Start Location</label>
+                        <input type="text" id="exp_start_location" name="start_location" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">End Location</label>
+                        <input type="text" id="exp_end_location" name="end_location" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="exp_is_featured" name="is_featured" value="true">
+                            <span class="text-sm font-medium text-slate-700">🔥 Feature this experience (shows at top)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="exp_is_active" name="is_active" value="true" checked>
+                            <span class="text-sm font-medium text-slate-700">✅ Active (visible to users)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="closeExperienceModal()" class="flex-1 px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
+                    <button type="submit" class="flex-1 text-white px-4 py-2 rounded-lg hover:opacity-90" style="background-color: {{.Settings.PrimaryColor}}">Save Experience</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
     <script>
         function showTab(tabName) {
@@ -420,6 +810,229 @@
                 fetch('/admin/product/delete/' + id, { method: 'POST' }).then(() => location.reload());
             }
         }
+        // Experience Management Functions
+        function openExperienceModal() {
+    		document.getElementById('experienceModalTitle').innerText = 'Add New Experience';
+    		document.getElementById('experienceForm').reset();
+    		document.getElementById('experience_id').value = '';
+    		document.getElementById('exp_is_active').checked = true;
+    		document.getElementById('exp_is_featured').checked = false;
+    		document.getElementById('experienceModal').classList.remove('hidden');
+    		document.getElementById('experienceModal').classList.add('flex');
+	}
+
+	function closeExperienceModal() {
+    		document.getElementById('experienceModal').classList.add('hidden');
+    		document.getElementById('experienceModal').classList.remove('flex');
+	}
+
+	function closeExperienceModalOnOutside(event) {
+    		if (event.target === document.getElementById('experienceModal')) {
+        	closeExperienceModal();
+    	}
+}
+
+function editExperience(id) {
+    fetch('/admin/experience/' + id)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('experienceModalTitle').innerText = 'Edit Experience';
+                document.getElementById('experience_id').value = data.experience.ID;
+                document.getElementById('exp_title').value = data.experience.Title;
+                document.getElementById('exp_description').value = data.experience.Description;
+                document.getElementById('exp_category').value = data.experience.Category;
+                document.getElementById('exp_vehicle_type').value = data.experience.VehicleType;
+                document.getElementById('exp_duration_days').value = data.experience.DurationDays;
+                document.getElementById('exp_duration_nights').value = data.experience.DurationNights;
+                document.getElementById('exp_price').value = data.experience.Price;
+                document.getElementById('exp_discounted_price').value = data.experience.DiscountedPrice;
+                document.getElementById('exp_max_people').value = data.experience.MaxPeople;
+                document.getElementById('exp_min_people').value = data.experience.MinPeople;
+                document.getElementById('exp_location').value = data.experience.Location;
+                document.getElementById('exp_cover_image').value = data.experience.CoverImage || '';
+                document.getElementById('exp_start_location').value = data.experience.StartLocation || '';
+                document.getElementById('exp_end_location').value = data.experience.EndLocation || '';
+                document.getElementById('exp_is_featured').checked = data.experience.IsFeatured;
+                document.getElementById('exp_is_active').checked = data.experience.IsActive;
+                document.getElementById('experienceModal').classList.remove('hidden');
+                document.getElementById('experienceModal').classList.add('flex');
+            } else {
+                alert('Error loading experience');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('Error loading experience');
+        });
+}
+
+function submitExperienceForm(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const id = document.getElementById('experience_id').value;
+    const url = id ? '/admin/experience/update/' + id : '/admin/experience/add';
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.text())
+    .then(data => {
+        if (data.includes('✅')) {
+            alert(data);
+            closeExperienceModal();
+            location.reload();
+        } else {
+            alert(data);
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Error saving experience');
+    });
+}
+
+function toggleExperienceStatus(id) {
+    if (confirm('Toggle experience active status?')) {
+        fetch('/admin/experience/toggle/' + id, { method: 'POST' })
+            .then(res => res.text())
+            .then(data => {
+                alert(data);
+                location.reload();
+            });
+    }
+}
+
+function toggleExperienceFeatured(id) {
+    fetch('/admin/experience/feature/' + id, { method: 'POST' })
+        .then(res => res.text())
+        .then(data => {
+            alert(data);
+            location.reload();
+        });
+}
+
+function deleteExperience(id) {
+    if (confirm('Delete this experience? This cannot be undone.')) {
+        fetch('/admin/experience/delete/' + id, { method: 'POST' })
+            .then(res => res.text())
+            .then(data => {
+                alert(data);
+                location.reload();
+            });
+    }
+}
+
+// POI Management Functions
+let currentPOIId = null;
+
+function openPOIModal() {
+    document.getElementById('poiModalTitle').innerText = 'Add New Location';
+    document.getElementById('poiForm').reset();
+    document.getElementById('poi_id').value = '';
+    document.getElementById('poi_is_active').checked = true;
+    document.getElementById('poi_is_partner').checked = false;
+    document.getElementById('poi_discount').value = '0';
+    document.getElementById('poi_rating').value = '0';
+    document.getElementById('poiModal').classList.remove('hidden');
+    document.getElementById('poiModal').classList.add('flex');
+}
+
+function closePOIModal() {
+    document.getElementById('poiModal').classList.add('hidden');
+    document.getElementById('poiModal').classList.remove('flex');
+}
+
+function closePOIModalOnOutside(event) {
+    if (event.target === document.getElementById('poiModal')) {
+        closePOIModal();
+    }
+}
+
+function editPOI(id) {
+    fetch('/admin/poi/' + id)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('poiModalTitle').innerText = 'Edit Location';
+                document.getElementById('poi_id').value = data.poi.ID;
+                document.getElementById('poi_name').value = data.poi.Name;
+                document.getElementById('poi_type').value = data.poi.Type;
+                document.getElementById('poi_category').value = data.poi.Category || '';
+                document.getElementById('poi_latitude').value = data.poi.Latitude;
+                document.getElementById('poi_longitude').value = data.poi.Longitude;
+                document.getElementById('poi_address').value = data.poi.Address || '';
+                document.getElementById('poi_city').value = data.poi.City || '';
+                document.getElementById('poi_state').value = data.poi.State || '';
+                document.getElementById('poi_phone').value = data.poi.Phone || '';
+                document.getElementById('poi_price_range').value = data.poi.PriceRange || '₹₹';
+                document.getElementById('poi_discount').value = data.poi.DiscountPercent || 0;
+                document.getElementById('poi_rating').value = data.poi.Rating || 0;
+                document.getElementById('poi_offer_details').value = data.poi.OfferDetails || '';
+                document.getElementById('poi_is_partner').checked = data.poi.IsPartner;
+                document.getElementById('poi_is_active').checked = data.poi.IsActive;
+                document.getElementById('poiModal').classList.remove('hidden');
+                document.getElementById('poiModal').classList.add('flex');
+            } else {
+                alert('Error loading location');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('Error loading location');
+        });
+}
+
+function submitPOIForm(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const id = document.getElementById('poi_id').value;
+    const url = id ? '/admin/poi/update/' + id : '/admin/poi/add';
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.text())
+    .then(data => {
+        if (data.includes('✅')) {
+            alert(data);
+            closePOIModal();
+            location.reload();
+        } else {
+            alert(data);
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Error saving location');
+    });
+}
+
+function togglePOIStatus(id) {
+    if (confirm('Toggle location active status?')) {
+        fetch('/admin/poi/toggle/' + id, { method: 'POST' })
+            .then(res => res.text())
+            .then(data => {
+                alert(data);
+                location.reload();
+            });
+    }
+}
+
+function deletePOI(id) {
+    if (confirm('Delete this location? This cannot be undone.')) {
+        fetch('/admin/poi/delete/' + id, { method: 'POST' })
+            .then(res => res.text())
+            .then(data => {
+                alert(data);
+                location.reload();
+            });
+    }
+}
         
         // Close modals when clicking outside
         window.onclick = function(event) {
