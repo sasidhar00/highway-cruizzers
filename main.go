@@ -2,34 +2,33 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/xml"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
-	"strings"
-	"time"
+	"math"
+	"net/http"
 	"os"
-	"crypto/sha256"
-	"encoding/hex"
-	"crypto/rand"
-	"encoding/base64"
 	"regexp"
 	"strconv"
-	"encoding/xml"
-	"io/ioutil"
-	"net/http"
-	"math"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/template/html/v2"
+	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	_ "github.com/tursodatabase/libsql-client-go/libsql"
 	"golang.org/x/crypto/bcrypt"
-	
-	"github.com/joho/godotenv"
 )
 
 // ==================== STRUCT DEFINITIONS ====================
@@ -706,6 +705,8 @@ func initDB() {
 	}
 
 	createTablesSQL := `
+-- ==================== ALL TABLES ====================
+
 CREATE TABLE IF NOT EXISTS rides (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER DEFAULT 0,
@@ -934,7 +935,6 @@ CREATE TABLE IF NOT EXISTS experience_bookings (
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
--- Points of Interest (Hotels, Restaurants, Relax Zones, Service Centers, Charging Points)
 CREATE TABLE IF NOT EXISTS points_of_interest (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -966,7 +966,6 @@ CREATE TABLE IF NOT EXISTS points_of_interest (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Partner Offers
 CREATE TABLE IF NOT EXISTS partner_offers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     partner_id INTEGER,
@@ -984,7 +983,6 @@ CREATE TABLE IF NOT EXISTS partner_offers (
     FOREIGN KEY(partner_id) REFERENCES points_of_interest(id)
 );
 
--- User Saved Places (Favorites)
 CREATE TABLE IF NOT EXISTS user_saved_places (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
@@ -996,7 +994,6 @@ CREATE TABLE IF NOT EXISTS user_saved_places (
     UNIQUE(user_id, poi_id)
 );
 
--- User Trip Routes
 CREATE TABLE IF NOT EXISTS user_trips (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
@@ -1010,7 +1007,6 @@ CREATE TABLE IF NOT EXISTS user_trips (
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
--- Partner Offers Claimed
 CREATE TABLE IF NOT EXISTS partner_offers_claimed (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     offer_id INTEGER,
@@ -1022,7 +1018,6 @@ CREATE TABLE IF NOT EXISTS partner_offers_claimed (
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
--- User Location History (opt-in)
 CREATE TABLE IF NOT EXISTS user_location_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
@@ -1032,6 +1027,18 @@ CREATE TABLE IF NOT EXISTS user_location_history (
     recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS user_follows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    follower_id INTEGER,
+    following_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(follower_id, following_id),
+    FOREIGN KEY(follower_id) REFERENCES users(id),
+    FOREIGN KEY(following_id) REFERENCES users(id)
+);
+
+
 `
 
 	_, err = db.Exec(createTablesSQL)
@@ -1078,7 +1085,7 @@ CREATE TABLE IF NOT EXISTS user_location_history (
 		log.Println("✅ Default site settings created")
 	}
 
-	// Seed news - REAL BIKE NEWS FOR PRODUCTION
+	// Seed news
 	var newsCount int
 	db.QueryRow("SELECT COUNT(*) FROM biking_news").Scan(&newsCount)
 	if newsCount == 0 {
@@ -1193,47 +1200,44 @@ CREATE TABLE IF NOT EXISTS user_location_history (
 		log.Println("✅ Seeded sample products")
 	}
 
-	// Seed Points of Interest (Hotels, Restaurants, etc.)
+	// Seed Points of Interest
 	var poiCount int
 	db.QueryRow("SELECT COUNT(*) FROM points_of_interest").Scan(&poiCount)
 	if poiCount == 0 {
+		log.Println("Seeding points of interest...")
+		
 		pois := []struct {
 			name, poiType, category, address, city, phone, priceRange string
 			lat, lng float64
 			rating float64
 			discount int
+			offerDetails string
 		}{
-			// Hotels
-			{"Hotel Himalayan Gateway", "hotel", "luxury", "NH 44, Near Bus Stand", "Manali", "9812345678", "₹₹₹", 32.2432, 77.1896, 4.5, 10},
-			{"Zostel Manali", "hotel", "budget", "Old Manali", "Manali", "9812345679", "₹", 32.2420, 77.1880, 4.3, 15},
-			{"JW Marriott Chandigarh", "hotel", "luxury", "Sector 35", "Chandigarh", "9812345680", "₹₹₹₹", 30.7333, 76.7794, 4.7, 0},
-			
-			// Restaurants
-			{"Johnson's Cafe", "restaurant", "cafe", "Club House Road", "Manali", "9812345681", "₹₹", 32.2410, 77.1870, 4.6, 10},
-			{"The Lazy Dog", "restaurant", "cafe", "Old Manali", "Manali", "9812345682", "₹₹", 32.2405, 77.1865, 4.4, 5},
-			{"Dhaba 29", "restaurant", "dhaba", "NH 44", "Kullu", "9812345683", "₹", 31.9580, 77.1100, 4.2, 0},
-			
-			// Relax Zones
-			{"Himalayan Spa & Wellness", "relax_zone", "spa", "Mall Road", "Manali", "9812345684", "₹₹₹", 32.2430, 77.1900, 4.5, 20},
-			{"Yoga House", "relax_zone", "yoga", "Old Manali", "Manali", "9812345685", "₹₹", 32.2415, 77.1860, 4.4, 15},
-			
-			// Service Centers
-			{"Royal Enfield Service Center", "service_center", "bike", "NH 44, Near Petrol Pump", "Manali", "9812345686", "₹₹", 32.2440, 77.1910, 4.3, 5},
-			{"Bike Point Service", "service_center", "multi-brand", "Mall Road", "Kullu", "9812345687", "₹₹", 31.9600, 77.1110, 4.1, 10},
-			{"Tyre Pro", "service_center", "tyres", "NH 44", "Mandi", "9812345688", "₹₹", 31.7100, 76.9300, 4.2, 0},
-			
-			// Charging Points (for electric bikes)
-			{"EV Charging Station", "charging_point", "electric", "HP Petrol Pump, NH 44", "Manali", "9812345689", "₹", 32.2450, 77.1920, 4.0, 5},
-			{"Green EV Charging", "charging_point", "electric", "Near Bus Stand", "Kullu", "9812345690", "₹", 31.9590, 77.1120, 4.1, 0},
+			{"Hotel Himalayan Gateway", "hotel", "luxury", "NH 44, Near Bus Stand", "Manali", "9812345678", "₹₹₹", 32.2432, 77.1896, 4.5, 10, "10% discount for members"},
+			{"Zostel Manali", "hotel", "budget", "Old Manali", "Manali", "9812345679", "₹", 32.2420, 77.1880, 4.3, 15, "15% off on dorm beds"},
+			{"JW Marriott Chandigarh", "hotel", "luxury", "Sector 35", "Chandigarh", "9812345680", "₹₹₹₹", 30.7333, 76.7794, 4.7, 0, ""},
+			{"Johnson's Cafe", "restaurant", "cafe", "Club House Road", "Manali", "9812345681", "₹₹", 32.2410, 77.1870, 4.6, 10, "10% off on total bill"},
+			{"The Lazy Dog", "restaurant", "cafe", "Old Manali", "Manali", "9812345682", "₹₹", 32.2405, 77.1865, 4.4, 5, "5% discount on food"},
+			{"Dhaba 29", "restaurant", "dhaba", "NH 44", "Kullu", "9812345683", "₹", 31.9580, 77.1100, 4.2, 0, ""},
+			{"Himalayan Spa & Wellness", "relax_zone", "spa", "Mall Road", "Manali", "9812345684", "₹₹₹", 32.2430, 77.1900, 4.5, 20, "20% off on spa treatments"},
+			{"Yoga House", "relax_zone", "yoga", "Old Manali", "Manali", "9812345685", "₹₹", 32.2415, 77.1860, 4.4, 15, "15% off on yoga classes"},
+			{"Royal Enfield Service Center", "service_center", "bike", "NH 44, Near Petrol Pump", "Manali", "9812345686", "₹₹", 32.2440, 77.1910, 4.3, 5, "5% discount on service"},
+			{"Bike Point Service", "service_center", "multi-brand", "Mall Road", "Kullu", "9812345687", "₹₹", 31.9600, 77.1110, 4.1, 10, "10% off on all services"},
+			{"Tyre Pro", "service_center", "tyres", "NH 44", "Mandi", "9812345688", "₹₹", 31.7100, 76.9300, 4.2, 0, ""},
+			{"EV Charging Station", "charging_point", "electric", "HP Petrol Pump, NH 44", "Manali", "9812345689", "₹", 32.2450, 77.1920, 4.0, 5, "5% discount on charging"},
+			{"Green EV Charging", "charging_point", "electric", "Near Bus Stand", "Kullu", "9812345690", "₹", 31.9590, 77.1120, 4.1, 0, ""},
 		}
 		
 		for _, poi := range pois {
-			db.Exec(`INSERT INTO points_of_interest (name, type, category, address, city, phone, 
-			          price_range, latitude, longitude, rating, is_partner, discount_percentage, is_active) 
-			          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+			_, err := db.Exec(`INSERT INTO points_of_interest (name, type, category, address, city, phone, 
+			          price_range, latitude, longitude, rating, is_partner, discount_percentage, offer_details, is_active) 
+			          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
 				poi.name, poi.poiType, poi.category, poi.address, poi.city, poi.phone,
 				poi.priceRange, poi.lat, poi.lng, poi.rating, 
-				poi.discount > 0, poi.discount)
+				poi.discount > 0, poi.discount, poi.offerDetails)
+			if err != nil {
+				log.Println("Error seeding POI:", err)
+			}
 		}
 		log.Println("✅ Seeded 13+ points of interest")
 	}
@@ -2501,28 +2505,28 @@ func main() {
 			}
 		}
 
-// Fetch all POIs for admin
-poiRows, err := db.Query(`
-    SELECT id, name, type, city, state, is_partner, discount_percentage, is_active
-    FROM points_of_interest ORDER BY created_at DESC
-`)
-var allPOIs []map[string]interface{}
-if err == nil {
-    defer poiRows.Close()
-    for poiRows.Next() {
-        var id, discount int
-        var name, poiType, city, state string
-        var isPartner, isActive bool
-        
-        poiRows.Scan(&id, &name, &poiType, &city, &state, &isPartner, &discount, &isActive)
-        
-        allPOIs = append(allPOIs, map[string]interface{}{
-            "ID": id, "Name": name, "Type": poiType,
-            "City": city, "State": state, "IsPartner": isPartner,
-            "DiscountPercent": discount, "IsActive": isActive,
-        })
-    }
-}
+		// Fetch all POIs for admin
+		poiRows, err := db.Query(`
+			SELECT id, name, type, city, state, is_partner, discount_percentage, is_active
+			FROM points_of_interest ORDER BY created_at DESC
+		`)
+		var allPOIs []map[string]interface{}
+		if err == nil {
+			defer poiRows.Close()
+			for poiRows.Next() {
+				var id, discount int
+				var name, poiType, city, state string
+				var isPartner, isActive bool
+				
+				poiRows.Scan(&id, &name, &poiType, &city, &state, &isPartner, &discount, &isActive)
+				
+				allPOIs = append(allPOIs, map[string]interface{}{
+					"ID": id, "Name": name, "Type": poiType,
+					"City": city, "State": state, "IsPartner": isPartner,
+					"DiscountPercent": discount, "IsActive": isActive,
+				})
+			}
+		}
 
 		userRows, _ := db.Query(`SELECT id, username, handle, email, COALESCE(phone, ''), is_admin, credits, is_premium, is_active, bike_model, riding_exp, avatar_url, is_verified FROM users ORDER BY id DESC`)
 		var users []User
@@ -2584,7 +2588,7 @@ if err == nil {
 			"AllAds":               allAds,
 			"AllProducts":          allProducts,
 			"AllExperiences":       allExperiences,
-                        "AllPOIs":              allPOIs,
+			"AllPOIs":              allPOIs,
 			"Categories":           categories,
 			"Settings":             settings,
 			"PendingVerifications": pendingVerifications,
@@ -2896,116 +2900,110 @@ if err == nil {
 	})
 
 	// API: Get nearby places based on location
+	app.Get("/api/nearby", func(c *fiber.Ctx) error {
+		latStr := c.Query("lat")
+		lngStr := c.Query("lng")
+		poiType := c.Query("type")
+		
+		lat, err := strconv.ParseFloat(latStr, 64)
+		if err != nil || lat == 0 {
+			lat = 28.6139 // Default Delhi
+		}
+		
+		lng, err := strconv.ParseFloat(lngStr, 64)
+		if err != nil || lng == 0 {
+			lng = 77.2090 // Default Delhi
+		}
+		
+		// Build query
+		query := `
+			SELECT id, name, type, category, latitude, longitude, 
+				   COALESCE(address, '') as address, 
+				   COALESCE(city, '') as city, 
+				   COALESCE(phone, '') as phone, 
+				   COALESCE(price_range, '₹₹') as price_range, 
+				   COALESCE(rating, 0) as rating, 
+				   COALESCE(total_reviews, 0) as total_reviews,
+				   COALESCE(is_partner, 0) as is_partner, 
+				   COALESCE(discount_percentage, 0) as discount_percentage,
+				   COALESCE(offer_details, '') as offer_details
+			FROM points_of_interest 
+			WHERE is_active = 1
+		`
+		args := []interface{}{}
+		
+		if poiType != "" && poiType != "all" {
+			query += " AND type = ?"
+			args = append(args, poiType)
+		}
+		
+		query += " ORDER BY id DESC LIMIT 50"
+		
+		rows, err := db.Query(query, args...)
+		if err != nil {
+			log.Println("Error fetching POIs:", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch places"})
+		}
+		defer rows.Close()
+		
+		var places []map[string]interface{}
+		for rows.Next() {
+			var id int
+			var name, poiTypeVal, category, address, city, phone, priceRange, offerDetails string
+			var latitude, longitude, rating float64
+			var totalReviews, discountPercentage int
+			var isPartner bool
+			
+			err := rows.Scan(&id, &name, &poiTypeVal, &category, &latitude, &longitude, &address, &city,
+				&phone, &priceRange, &rating, &totalReviews, &isPartner, &discountPercentage, &offerDetails)
+			if err != nil {
+				continue
+			}
+			
+			distance := calculateDistance(lat, lng, latitude, longitude)
+			
+			places = append(places, map[string]interface{}{
+				"id": id, "name": name, "type": poiTypeVal, "category": category,
+				"latitude": latitude, "longitude": longitude, "address": address,
+				"city": city, "phone": phone, "price_range": priceRange,
+				"rating": rating, "total_reviews": totalReviews,
+				"distance": math.Round(distance*10)/10,
+				"discount_percent": discountPercentage,
+				"is_partner": isPartner,
+			})
+		}
+		
+		// Get nearby offers
+		var offers []map[string]interface{}
+		offerRows, err := db.Query(`
+			SELECT DISTINCT po.id, po.name, po.discount_percentage, po.offer_details
+			FROM points_of_interest po
+			WHERE po.is_partner = 1 AND po.discount_percentage > 0 AND po.is_active = 1
+			LIMIT 10
+		`)
+		
+		if err == nil {
+			defer offerRows.Close()
+			for offerRows.Next() {
+				var id, discount int
+				var name, details string
+				offerRows.Scan(&id, &name, &discount, &details)
+				offers = append(offers, map[string]interface{}{
+					"id": id, "title": name, "description": details,
+					"discount_value": discount,
+				})
+			}
+		}
+		
+		return c.JSON(fiber.Map{
+			"success": true,
+			"places": places,
+			"offers": offers,
+			"user_location": map[string]float64{"lat": lat, "lng": lng},
+			"count": len(places),
+		})
+	})
 
-app.Get("/api/nearby", func(c *fiber.Ctx) error {
-    latStr := c.Query("lat")
-    lngStr := c.Query("lng")
-    poiType := c.Query("type")
-    
-    lat, err := strconv.ParseFloat(latStr, 64)
-    if err != nil || lat == 0 {
-        lat = 28.6139 // Default Delhi
-    }
-    
-    lng, err := strconv.ParseFloat(lngStr, 64)
-    if err != nil || lng == 0 {
-        lng = 77.2090 // Default Delhi
-    }
-    
-    log.Printf("API Nearby called - lat: %f, lng: %f, type: %s", lat, lng, poiType)
-    
-    // Build query - simplified to avoid Haversine formula issues
-    query := `
-        SELECT id, name, type, category, latitude, longitude, 
-               COALESCE(address, '') as address, 
-               COALESCE(city, '') as city, 
-               COALESCE(phone, '') as phone, 
-               COALESCE(price_range, '₹₹') as price_range, 
-               COALESCE(rating, 0) as rating, 
-               COALESCE(total_reviews, 0) as total_reviews,
-               COALESCE(is_partner, 0) as is_partner, 
-               COALESCE(discount_percentage, 0) as discount_percentage,
-               COALESCE(offer_details, '') as offer_details
-        FROM points_of_interest 
-        WHERE is_active = 1
-    `
-    args := []interface{}{}
-    
-    if poiType != "" && poiType != "all" {
-        query += " AND type = ?"
-        args = append(args, poiType)
-    }
-    
-    query += " ORDER BY id DESC LIMIT 50"
-    
-    rows, err := db.Query(query, args...)
-    if err != nil {
-        log.Println("Error fetching POIs:", err)
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch places", "details": err.Error()})
-    }
-    defer rows.Close()
-    
-    var places []map[string]interface{}
-    for rows.Next() {
-        var id int
-        var name, poiTypeVal, category, address, city, phone, priceRange, offerDetails string
-        var latitude, longitude, rating float64
-        var totalReviews, discountPercentage int
-        var isPartner bool
-        
-        err := rows.Scan(&id, &name, &poiTypeVal, &category, &latitude, &longitude, &address, &city,
-            &phone, &priceRange, &rating, &totalReviews, &isPartner, &discountPercentage, &offerDetails)
-        if err != nil {
-            log.Println("Error scanning POI row:", err)
-            continue
-        }
-        
-        // Calculate approximate distance (simple Euclidean for demo)
-        distance := calculateDistance(lat, lng, latitude, longitude)
-        
-        places = append(places, map[string]interface{}{
-            "id": id, "name": name, "type": poiTypeVal, "category": category,
-            "latitude": latitude, "longitude": longitude, "address": address,
-            "city": city, "phone": phone, "price_range": priceRange,
-            "rating": rating, "total_reviews": totalReviews,
-            "distance": math.Round(distance*10)/10,
-            "discount_percent": discountPercentage,
-            "is_partner": isPartner,
-        })
-    }
-    
-    // Get nearby offers
-    var offers []map[string]interface{}
-    offerRows, err := db.Query(`
-        SELECT DISTINCT po.id, po.name, po.discount_percentage, po.offer_details
-        FROM points_of_interest po
-        WHERE po.is_partner = 1 AND po.discount_percentage > 0 AND po.is_active = 1
-        LIMIT 10
-    `)
-    
-    if err == nil {
-        defer offerRows.Close()
-        for offerRows.Next() {
-            var id, discount int
-            var name, details string
-            offerRows.Scan(&id, &name, &discount, &details)
-            offers = append(offers, map[string]interface{}{
-                "id": id, "title": name, "description": details,
-                "discount_value": discount,
-            })
-        }
-    }
-    
-    return c.JSON(fiber.Map{
-        "success": true,
-        "places": places,
-        "offers": offers,
-        "user_location": map[string]float64{"lat": lat, "lng": lng},
-        "count": len(places),
-    })
-})
-
-// Helper function to calculate distance between two coordinates (Haversine formula)
 	// API: Save user location for personalized offers
 	app.Post("/api/save-location", func(c *fiber.Ctx) error {
 		currentUser := getCurrentUser(c)
@@ -3061,34 +3059,264 @@ app.Get("/api/nearby", func(c *fiber.Ctx) error {
 	})
 
 	// Place detail page
-	app.Get("/place/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
+// Place detail page - SIMPLIFIED VERSION
+app.Get("/place/:id", func(c *fiber.Ctx) error {
+    id := c.Params("id")
+    currentUser := getCurrentUser(c)
+    settings := getSiteSettings()
+    
+    var place PointOfInterest
+    
+    // Simplified query - only select columns that definitely exist
+    err := db.QueryRow(`
+        SELECT id, name, type, 
+               COALESCE(category, '') as category,
+               latitude, longitude, 
+               COALESCE(address, '') as address,
+               COALESCE(city, '') as city,
+               COALESCE(state, '') as state,
+               COALESCE(phone, '') as phone,
+               COALESCE(price_range, '₹₹') as price_range,
+               COALESCE(rating, 0) as rating,
+               COALESCE(total_reviews, 0) as total_reviews,
+               COALESCE(is_partner, 0) as is_partner,
+               COALESCE(discount_percentage, 0) as discount_percentage,
+               COALESCE(offer_details, '') as offer_details
+        FROM points_of_interest 
+        WHERE id = ? AND is_active = 1
+    `, id).Scan(
+        &place.ID, &place.Name, &place.Type, &place.Category,
+        &place.Latitude, &place.Longitude, &place.Address, &place.City,
+        &place.State, &place.Phone, &place.PriceRange, &place.Rating,
+        &place.TotalReviews, &place.IsPartner, &place.DiscountPercent, &place.OfferDetails)
+    
+    if err != nil {
+        log.Println("Place not found - ID:", id, "Error:", err)
+        return c.Redirect("/trip-planner")
+    }
+    
+    return c.Render("place-detail", fiber.Map{
+        "CurrentUser": currentUser,
+        "Place":       place,
+        "Settings":    settings,
+        "IsAdmin":     currentUser != nil && currentUser.IsAdmin,
+    })
+})
+
+	// Admin endpoint to seed POIs
+	app.Get("/admin/seed-pois", func(c *fiber.Ctx) error {
 		currentUser := getCurrentUser(c)
-		settings := getSiteSettings()
-		
-		var place PointOfInterest
-		err := db.QueryRow(`
-			SELECT id, name, type, category, latitude, longitude, address, city, state,
-				   phone, email, website, price_range, rating, total_reviews, amenities,
-				   images, opening_time, closing_time, is_24x7, is_partner, 
-				   discount_percentage, offer_details
-			FROM points_of_interest WHERE id = ? AND is_active = 1
-		`, id).Scan(&place.ID, &place.Name, &place.Type, &place.Category, &place.Latitude,
-			&place.Longitude, &place.Address, &place.City, &place.State, &place.Phone,
-			&place.Email, &place.Website, &place.PriceRange, &place.Rating, &place.TotalReviews,
-			&place.Amenities, &place.Images, &place.OpeningTime, &place.ClosingTime,
-			&place.Is24x7, &place.IsPartner, &place.DiscountPercent, &place.OfferDetails)
-		
-		if err != nil {
-			return c.Redirect("/trip-planner")
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
 		}
 		
-		return c.Render("place-detail", fiber.Map{
-			"CurrentUser": currentUser,
-			"Place":       place,
-			"Settings":    settings,
-			"IsAdmin":     currentUser != nil && currentUser.IsAdmin,
-		})
+		pois := []struct {
+			name, poiType, category, address, city, phone, priceRange string
+			lat, lng, rating float64
+			discount int
+			offerDetails string
+		}{
+			{"Hotel Himalayan View", "hotel", "luxury", "Mall Road, Near Bus Stand", "Manali", "+91 9812345601", "₹₹₹", 32.2432, 77.1896, 4.5, 15, "15% discount for Highway Cruizzers members"},
+			{"Zostel Manali", "hotel", "budget", "Old Manali", "Manali", "+91 9812345602", "₹", 32.2420, 77.1880, 4.3, 10, "10% off on dorm beds and private rooms"},
+			{"Johnson's Cafe", "restaurant", "cafe", "Club House Road", "Manali", "+91 9812345605", "₹₹", 32.2410, 77.1870, 4.6, 10, "10% off on total bill"},
+			{"The Lazy Dog", "restaurant", "cafe", "Old Manali", "Manali", "+91 9812345606", "₹₹", 32.2405, 77.1865, 4.4, 5, "5% discount on food and beverages"},
+			{"Royal Enfield Service Center", "service_center", "bike", "NH 44, Near Petrol Pump", "Manali", "+91 9812345609", "₹₹", 32.2440, 77.1910, 4.3, 5, "5% discount on service and spare parts"},
+			{"EV Charging Station", "charging_point", "electric", "HP Petrol Pump, NH 44", "Manali", "+91 9812345612", "₹", 32.2450, 77.1920, 4.0, 5, "5% discount on charging"},
+			{"Himalayan Spa & Wellness", "relax_zone", "spa", "Mall Road", "Manali", "+91 9812345614", "₹₹₹", 32.2430, 77.1900, 4.5, 20, "20% off on massage and spa treatments"},
+		}
+		
+		for _, p := range pois {
+			_, err := db.Exec(`INSERT OR IGNORE INTO points_of_interest (name, type, category, address, city, phone, price_range, latitude, longitude, rating, is_partner, discount_percentage, offer_details, is_active) 
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 1)`,
+				p.name, p.poiType, p.category, p.address, p.city, p.phone, p.priceRange, p.lat, p.lng, p.rating, p.discount, p.offerDetails)
+			if err != nil {
+				log.Println("Error seeding POI:", err)
+			}
+		}
+		
+		return c.SendString("✅ POIs seeded successfully! <a href='/admin'>Go back</a>")
+	})
+
+	// Get single POI for editing
+	app.Get("/admin/poi/:id", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).JSON(fiber.Map{"error": "Access denied"})
+		}
+		
+		id := c.Params("id")
+		var poi struct {
+			ID              int
+			Name            string
+			Type            string
+			Category        string
+			Latitude        float64
+			Longitude       float64
+			Address         string
+			City            string
+			State           string
+			Phone           string
+			PriceRange      string
+			Rating          float64
+			IsPartner       bool
+			DiscountPercent int
+			OfferDetails    string
+			IsActive        bool
+		}
+		
+		err := db.QueryRow(`
+			SELECT id, name, type, COALESCE(category, ''), latitude, longitude, 
+				   COALESCE(address, ''), COALESCE(city, ''), COALESCE(state, ''),
+				   COALESCE(phone, ''), COALESCE(price_range, '₹₹'), COALESCE(rating, 0),
+				   is_partner, COALESCE(discount_percentage, 0), COALESCE(offer_details, ''), is_active
+			FROM points_of_interest WHERE id = ?
+		`, id).Scan(&poi.ID, &poi.Name, &poi.Type, &poi.Category, &poi.Latitude, &poi.Longitude,
+			&poi.Address, &poi.City, &poi.State, &poi.Phone, &poi.PriceRange, &poi.Rating,
+			&poi.IsPartner, &poi.DiscountPercent, &poi.OfferDetails, &poi.IsActive)
+		
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"success": false, "error": "POI not found"})
+		}
+		
+		return c.JSON(fiber.Map{"success": true, "poi": poi})
+	})
+
+	// Add new POI
+	app.Post("/admin/poi/add", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
+		}
+		
+		name := c.FormValue("name")
+		poiType := c.FormValue("type")
+		category := c.FormValue("category")
+		latitude, _ := strconv.ParseFloat(c.FormValue("latitude"), 64)
+		longitude, _ := strconv.ParseFloat(c.FormValue("longitude"), 64)
+		address := c.FormValue("address")
+		city := c.FormValue("city")
+		state := c.FormValue("state")
+		phone := c.FormValue("phone")
+		priceRange := c.FormValue("price_range")
+		rating, _ := strconv.ParseFloat(c.FormValue("rating"), 64)
+		discount, _ := strconv.Atoi(c.FormValue("discount_percentage"))
+		offerDetails := c.FormValue("offer_details")
+		isPartner := c.FormValue("is_partner") == "true" || c.FormValue("is_partner") == "on"
+		isActive := c.FormValue("is_active") == "true" || c.FormValue("is_active") == "on"
+		
+		if name == "" || latitude == 0 || longitude == 0 {
+			return c.Status(400).SendString("❌ Name, latitude and longitude are required")
+		}
+		
+		_, err := db.Exec(`
+			INSERT INTO points_of_interest (name, type, category, latitude, longitude, address, 
+				city, state, phone, price_range, rating, is_partner, discount_percentage, 
+				offer_details, is_active)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, name, poiType, category, latitude, longitude, address, city, state, phone,
+			priceRange, rating, isPartner, discount, offerDetails, isActive)
+		
+		if err != nil {
+			log.Println("Error adding POI:", err)
+			return c.Status(500).SendString("❌ Failed to add location: " + err.Error())
+		}
+		
+		return c.SendString("✅ Location added successfully!")
+	})
+
+	// Update POI
+	app.Post("/admin/poi/update/:id", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
+		}
+		
+		id := c.Params("id")
+		name := c.FormValue("name")
+		poiType := c.FormValue("type")
+		category := c.FormValue("category")
+		latitude, _ := strconv.ParseFloat(c.FormValue("latitude"), 64)
+		longitude, _ := strconv.ParseFloat(c.FormValue("longitude"), 64)
+		address := c.FormValue("address")
+		city := c.FormValue("city")
+		state := c.FormValue("state")
+		phone := c.FormValue("phone")
+		priceRange := c.FormValue("price_range")
+		rating, _ := strconv.ParseFloat(c.FormValue("rating"), 64)
+		discount, _ := strconv.Atoi(c.FormValue("discount_percentage"))
+		offerDetails := c.FormValue("offer_details")
+		isPartner := c.FormValue("is_partner") == "true" || c.FormValue("is_partner") == "on"
+		isActive := c.FormValue("is_active") == "true" || c.FormValue("is_active") == "on"
+		
+		_, err := db.Exec(`
+			UPDATE points_of_interest SET
+				name = ?, type = ?, category = ?, latitude = ?, longitude = ?, 
+				address = ?, city = ?, state = ?, phone = ?, price_range = ?, 
+				rating = ?, is_partner = ?, discount_percentage = ?, 
+				offer_details = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+			WHERE id = ?
+		`, name, poiType, category, latitude, longitude, address, city, state, phone,
+			priceRange, rating, isPartner, discount, offerDetails, isActive, id)
+		
+		if err != nil {
+			return c.Status(500).SendString("❌ Failed to update location")
+		}
+		
+		return c.SendString("✅ Location updated successfully!")
+	})
+
+	// Toggle POI active status
+	app.Post("/admin/poi/toggle/:id", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
+		}
+		
+		id := c.Params("id")
+		db.Exec("UPDATE points_of_interest SET is_active = NOT is_active WHERE id = ?", id)
+		return c.SendString("✅ Location status toggled")
+	})
+
+	// Delete POI
+	app.Post("/admin/poi/delete/:id", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil || !currentUser.IsAdmin {
+			return c.Status(403).SendString("Access denied")
+		}
+		
+		id := c.Params("id")
+		db.Exec("DELETE FROM points_of_interest WHERE id = ?", id)
+		return c.SendString("✅ Location deleted")
+	})
+
+	// API: Save trip to database
+	app.Post("/api/save-trip", func(c *fiber.Ctx) error {
+		currentUser := getCurrentUser(c)
+		if currentUser == nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Please login"})
+		}
+		
+		var data struct {
+			Title         string  `json:"title"`
+			StartLocation string  `json:"start_location"`
+			EndLocation   string  `json:"end_location"`
+			DistanceKm    float64 `json:"distance_km"`
+			EstimatedTime string  `json:"estimated_time"`
+		}
+		
+		if err := c.BodyParser(&data); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid data"})
+		}
+		
+		_, err := db.Exec(`INSERT INTO user_trips (user_id, title, start_location, end_location, distance_km, estimated_time) 
+						   VALUES (?, ?, ?, ?, ?, ?)`,
+			currentUser.ID, data.Title, data.StartLocation, data.EndLocation, data.DistanceKm, data.EstimatedTime)
+		
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save trip"})
+		}
+		
+		return c.JSON(fiber.Map{"success": true})
 	})
 
 	// ==================== AUTHENTICATION ====================
@@ -3201,230 +3429,101 @@ app.Get("/api/nearby", func(c *fiber.Ctx) error {
 		return c.SendString(`<div class="p-4 text-center">Logged out<script>window.location.reload()</script></div>`)
 	})
 
-// ==================== ADMIN POI MANAGEMENT ====================
 
-// Get all POIs for admin
-app.Get("/admin/pois", func(c *fiber.Ctx) error {
+// ==================== FOLLOW/UNFOLLOW ROUTES ====================
+
+// Follow a user
+app.Post("/follow/:userId", func(c *fiber.Ctx) error {
     currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).JSON(fiber.Map{"error": "Access denied"})
-    }
-    
-    rows, err := db.Query(`
-        SELECT id, name, type, category, latitude, longitude, address, city, state,
-               phone, price_range, rating, is_partner, discount_percentage, 
-               offer_details, is_active
-        FROM points_of_interest ORDER BY created_at DESC
-    `)
-    if err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to load POIs"})
-    }
-    defer rows.Close()
-    
-    var pois []map[string]interface{}
-    for rows.Next() {
-        var id, discount int
-        var name, poiType, category, address, city, state, phone, priceRange, offerDetails string
-        var latitude, longitude, rating float64
-        var isPartner, isActive bool
-        
-        rows.Scan(&id, &name, &poiType, &category, &latitude, &longitude, &address, &city,
-            &state, &phone, &priceRange, &rating, &isPartner, &discount, &offerDetails, &isActive)
-        
-        pois = append(pois, map[string]interface{}{
-            "ID": id, "Name": name, "Type": poiType, "Category": category,
-            "Latitude": latitude, "Longitude": longitude, "Address": address,
-            "City": city, "State": state, "Phone": phone, "PriceRange": priceRange,
-            "Rating": rating, "IsPartner": isPartner, "DiscountPercent": discount,
-            "OfferDetails": offerDetails, "IsActive": isActive,
+    if currentUser == nil {
+        return c.Status(401).JSON(fiber.Map{
+            "success": false, 
+            "message": "Please login to follow users",
         })
     }
     
-    return c.JSON(fiber.Map{"success": true, "pois": pois})
-})
-
-// Get single POI for editing
-app.Get("/admin/poi/:id", func(c *fiber.Ctx) error {
-    currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).JSON(fiber.Map{"error": "Access denied"})
-    }
-    
-    id := c.Params("id")
-    var poi struct {
-        ID              int
-        Name            string
-        Type            string
-        Category        string
-        Latitude        float64
-        Longitude       float64
-        Address         string
-        City            string
-        State           string
-        Phone           string
-        PriceRange      string
-        Rating          float64
-        IsPartner       bool
-        DiscountPercent int
-        OfferDetails    string
-        IsActive        bool
-    }
-    
-    err := db.QueryRow(`
-        SELECT id, name, type, COALESCE(category, ''), latitude, longitude, 
-               COALESCE(address, ''), COALESCE(city, ''), COALESCE(state, ''),
-               COALESCE(phone, ''), COALESCE(price_range, '₹₹'), COALESCE(rating, 0),
-               is_partner, COALESCE(discount_percentage, 0), COALESCE(offer_details, ''), is_active
-        FROM points_of_interest WHERE id = ?
-    `, id).Scan(&poi.ID, &poi.Name, &poi.Type, &poi.Category, &poi.Latitude, &poi.Longitude,
-        &poi.Address, &poi.City, &poi.State, &poi.Phone, &poi.PriceRange, &poi.Rating,
-        &poi.IsPartner, &poi.DiscountPercent, &poi.OfferDetails, &poi.IsActive)
-    
+    targetUserId := c.Params("userId")
+    userIdInt, err := strconv.Atoi(targetUserId)
     if err != nil {
-        return c.Status(404).JSON(fiber.Map{"success": false, "error": "POI not found"})
+        return c.Status(400).JSON(fiber.Map{"success": false, "message": "Invalid user ID"})
     }
     
-    return c.JSON(fiber.Map{"success": true, "poi": poi})
+    if currentUser.ID == userIdInt {
+        return c.JSON(fiber.Map{"success": false, "message": "You cannot follow yourself"})
+    }
+    
+    // Check if already following
+    var count int
+    db.QueryRow("SELECT COUNT(*) FROM user_follows WHERE follower_id = ? AND following_id = ?", 
+        currentUser.ID, userIdInt).Scan(&count)
+    
+    if count == 0 {
+        _, err := db.Exec("INSERT INTO user_follows (follower_id, following_id) VALUES (?, ?)", 
+            currentUser.ID, userIdInt)
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{"success": false, "message": "Failed to follow user"})
+        }
+    }
+    
+    return c.JSON(fiber.Map{"success": true, "message": "Now following user"})
 })
 
-// Add new POI
-app.Post("/admin/poi/add", func(c *fiber.Ctx) error {
-    currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).SendString("Access denied")
-    }
-    
-    name := c.FormValue("name")
-    poiType := c.FormValue("type")
-    category := c.FormValue("category")
-    latitude, _ := strconv.ParseFloat(c.FormValue("latitude"), 64)
-    longitude, _ := strconv.ParseFloat(c.FormValue("longitude"), 64)
-    address := c.FormValue("address")
-    city := c.FormValue("city")
-    state := c.FormValue("state")
-    phone := c.FormValue("phone")
-    priceRange := c.FormValue("price_range")
-    rating, _ := strconv.ParseFloat(c.FormValue("rating"), 64)
-    discount, _ := strconv.Atoi(c.FormValue("discount_percentage"))
-    offerDetails := c.FormValue("offer_details")
-    isPartner := c.FormValue("is_partner") == "true" || c.FormValue("is_partner") == "on"
-    isActive := c.FormValue("is_active") == "true" || c.FormValue("is_active") == "on"
-    
-    if name == "" || latitude == 0 || longitude == 0 {
-        return c.Status(400).SendString("❌ Name, latitude and longitude are required")
-    }
-    
-    _, err := db.Exec(`
-        INSERT INTO points_of_interest (name, type, category, latitude, longitude, address, 
-            city, state, phone, price_range, rating, is_partner, discount_percentage, 
-            offer_details, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, name, poiType, category, latitude, longitude, address, city, state, phone,
-        priceRange, rating, isPartner, discount, offerDetails, isActive)
-    
-    if err != nil {
-        log.Println("Error adding POI:", err)
-        return c.Status(500).SendString("❌ Failed to add location: " + err.Error())
-    }
-    
-    return c.SendString("✅ Location added successfully!")
-})
-
-// Update POI
-app.Post("/admin/poi/update/:id", func(c *fiber.Ctx) error {
-    currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).SendString("Access denied")
-    }
-    
-    id := c.Params("id")
-    name := c.FormValue("name")
-    poiType := c.FormValue("type")
-    category := c.FormValue("category")
-    latitude, _ := strconv.ParseFloat(c.FormValue("latitude"), 64)
-    longitude, _ := strconv.ParseFloat(c.FormValue("longitude"), 64)
-    address := c.FormValue("address")
-    city := c.FormValue("city")
-    state := c.FormValue("state")
-    phone := c.FormValue("phone")
-    priceRange := c.FormValue("price_range")
-    rating, _ := strconv.ParseFloat(c.FormValue("rating"), 64)
-    discount, _ := strconv.Atoi(c.FormValue("discount_percentage"))
-    offerDetails := c.FormValue("offer_details")
-    isPartner := c.FormValue("is_partner") == "true" || c.FormValue("is_partner") == "on"
-    isActive := c.FormValue("is_active") == "true" || c.FormValue("is_active") == "on"
-    
-    _, err := db.Exec(`
-        UPDATE points_of_interest SET
-            name = ?, type = ?, category = ?, latitude = ?, longitude = ?, 
-            address = ?, city = ?, state = ?, phone = ?, price_range = ?, 
-            rating = ?, is_partner = ?, discount_percentage = ?, 
-            offer_details = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    `, name, poiType, category, latitude, longitude, address, city, state, phone,
-        priceRange, rating, isPartner, discount, offerDetails, isActive, id)
-    
-    if err != nil {
-        return c.Status(500).SendString("❌ Failed to update location")
-    }
-    
-    return c.SendString("✅ Location updated successfully!")
-})
-
-// Toggle POI active status
-app.Post("/admin/poi/toggle/:id", func(c *fiber.Ctx) error {
-    currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).SendString("Access denied")
-    }
-    
-    id := c.Params("id")
-    db.Exec("UPDATE points_of_interest SET is_active = NOT is_active WHERE id = ?", id)
-    return c.SendString("✅ Location status toggled")
-})
-
-// Delete POI
-app.Post("/admin/poi/delete/:id", func(c *fiber.Ctx) error {
-    currentUser := getCurrentUser(c)
-    if currentUser == nil || !currentUser.IsAdmin {
-        return c.Status(403).SendString("Access denied")
-    }
-    
-    id := c.Params("id")
-    db.Exec("DELETE FROM points_of_interest WHERE id = ?", id)
-    return c.SendString("✅ Location deleted")
-})
-
-// API: Save trip to database
-app.Post("/api/save-trip", func(c *fiber.Ctx) error {
+// Unfollow a user
+app.Post("/unfollow/:userId", func(c *fiber.Ctx) error {
     currentUser := getCurrentUser(c)
     if currentUser == nil {
-        return c.Status(401).JSON(fiber.Map{"error": "Please login"})
+        return c.Status(401).JSON(fiber.Map{
+            "success": false, 
+            "message": "Please login to unfollow users",
+        })
     }
     
-    var data struct {
-        Title         string  `json:"title"`
-        StartLocation string  `json:"start_location"`
-        EndLocation   string  `json:"end_location"`
-        DistanceKm    float64 `json:"distance_km"`
-        EstimatedTime string  `json:"estimated_time"`
-    }
-    
-    if err := c.BodyParser(&data); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid data"})
-    }
-    
-    _, err := db.Exec(`INSERT INTO user_trips (user_id, title, start_location, end_location, distance_km, estimated_time) 
-                       VALUES (?, ?, ?, ?, ?, ?)`,
-        currentUser.ID, data.Title, data.StartLocation, data.EndLocation, data.DistanceKm, data.EstimatedTime)
-    
+    targetUserId := c.Params("userId")
+    userIdInt, err := strconv.Atoi(targetUserId)
     if err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to save trip"})
+        return c.Status(400).JSON(fiber.Map{"success": false, "message": "Invalid user ID"})
     }
     
-    return c.JSON(fiber.Map{"success": true})
+    _, err = db.Exec("DELETE FROM user_follows WHERE follower_id = ? AND following_id = ?", 
+        currentUser.ID, userIdInt)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"success": false, "message": "Failed to unfollow user"})
+    }
+    
+    return c.JSON(fiber.Map{"success": true, "message": "Unfollowed user"})
 })
 
+// Check if current user is following another user
+app.Get("/api/check-follow/:userId", func(c *fiber.Ctx) error {
+    currentUser := getCurrentUser(c)
+    if currentUser == nil {
+        return c.JSON(fiber.Map{"isFollowing": false})
+    }
+    
+    targetUserId := c.Params("userId")
+    userIdInt, _ := strconv.Atoi(targetUserId)
+    
+    var count int
+    db.QueryRow("SELECT COUNT(*) FROM user_follows WHERE follower_id = ? AND following_id = ?", 
+        currentUser.ID, userIdInt).Scan(&count)
+    
+    return c.JSON(fiber.Map{"isFollowing": count > 0})
+})
+
+// Get follower count for a user
+app.Get("/api/followers/:userId", func(c *fiber.Ctx) error {
+    targetUserId := c.Params("userId")
+    userIdInt, _ := strconv.Atoi(targetUserId)
+    
+    var followers, following int
+    db.QueryRow("SELECT COUNT(*) FROM user_follows WHERE following_id = ?", userIdInt).Scan(&followers)
+    db.QueryRow("SELECT COUNT(*) FROM user_follows WHERE follower_id = ?", userIdInt).Scan(&following)
+    
+    return c.JSON(fiber.Map{
+        "followers": followers,
+        "following": following,
+    })
+})
 	// ==================== START SERVER ====================
 	
 	port := os.Getenv("PORT")

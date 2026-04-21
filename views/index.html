@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>{{.Settings.SiteName}} | Ride, Rent, Explore</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -46,8 +47,7 @@
                 
                 <nav class="space-y-1">
                     <a href="/" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🏠 Home</a>
-                        <!-- ✅ ADD THIS LINE - Trip Planner -->
-    <a href="/trip-planner" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100"            			style="color: {{.Settings.PrimaryColor}}">🗺️ Trip Planner</a>
+                    <a href="/trip-planner" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🗺️ Trip Planner</a>
                     <a href="/experiences" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-bold hover:bg-slate-100" style="color: {{.Settings.PrimaryColor}}">🚐 Travel Experiences</a>
                     <a href="/marketplace" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🛍️ Marketplace</a>
                     <a href="/search" onclick="closeMobileMenu()" class="sidebar-item flex items-center gap-3 p-3 rounded-full text-base font-medium hover:bg-slate-100">🔍 Find Rides</a>
@@ -186,7 +186,9 @@
                                     {{if .IsFeatured}}<span class="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">🔥 FEATURED RIDE</span>{{end}}
                                     {{if .IsBoosted}}<span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">⚡ BOOSTED</span>{{end}}
                                 </div>
-                                <button onclick="toggleFollow(this)" class="text-xs font-semibold px-3 py-1.5 bg-black text-white rounded-full hover:bg-slate-800 transition active:scale-95 w-fit">Follow</button>
+                                <button onclick="toggleFollow(this)" data-user-id="{{.UserID}}" class="follow-btn text-xs font-semibold px-3 py-1.5 bg-black text-white rounded-full hover:bg-slate-800 transition active:scale-95 w-fit">
+                                    Follow
+                                </button>
                             </div>
 
                             <div class="flex flex-wrap gap-1.5 mb-2">
@@ -295,8 +297,105 @@
         function addPoll() { alert("📊 Poll feature coming soon!"); }
         function insertEmoji() { const t = document.querySelector('textarea[name="content"]'); if(t) t.value += " 🏍️ "; t?.focus(); }
         function switchAuthTab(n) { const loginDiv = document.getElementById('auth-login'), signupDiv = document.getElementById('auth-signup'), loginTab = document.getElementById('tab-login'), signupTab = document.getElementById('tab-signup'); if (n === 0) { loginDiv.classList.remove('hidden'); signupDiv.classList.add('hidden'); loginTab.classList.add('border-b-2'); signupTab.classList.remove('border-b-2'); } else { loginDiv.classList.add('hidden'); signupDiv.classList.remove('hidden'); signupTab.classList.add('border-b-2'); loginTab.classList.remove('border-b-2'); } }
-        function toggleFollow(btn) { if (btn.textContent.includes('Follow')) { btn.innerHTML = 'Following ✓'; btn.classList.add('!bg-emerald-600'); } else { btn.textContent = 'Follow'; btn.classList.remove('!bg-emerald-600'); } }
+        
+        function toggleFollow(btn) {
+            {{if .CurrentUser}}
+                const userId = btn.getAttribute('data-user-id');
+                const isFollowing = btn.textContent.includes('Following');
+                const url = isFollowing ? '/unfollow/' + userId : '/follow/' + userId;
+                
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                
+                fetch(url, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        if (isFollowing) {
+                            btn.innerHTML = 'Follow';
+                            btn.classList.remove('!bg-emerald-600');
+                            btn.style.backgroundColor = '';
+                        } else {
+                            btn.innerHTML = 'Following ✓';
+                            btn.classList.add('!bg-emerald-600');
+                        }
+                        showToast(data.message);
+                    } else {
+                        alert(data.message || 'Action failed');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    alert('Something went wrong. Please try again.');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                });
+            {{else}}
+                showLoginPrompt();
+            {{end}}
+        }
+
+        function showToast(message) {
+            let toast = document.getElementById('followToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'followToast';
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 80px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #1f2937;
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 50px;
+                    font-size: 14px;
+                    z-index: 9999;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    pointer-events: none;
+                    font-family: system-ui, sans-serif;
+                    white-space: nowrap;
+                `;
+                document.body.appendChild(toast);
+            }
+            
+            toast.textContent = message;
+            toast.style.opacity = '1';
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        }
+
         function attachMedia() { const url = prompt("📸 Paste your image URL:"); if(url) document.querySelector('input[name="image_url"]').value = url; }
+        
+        function loadFollowStatuses() {
+            {{if .CurrentUser}}
+                const followButtons = document.querySelectorAll('.follow-btn');
+                followButtons.forEach(btn => {
+                    const userId = btn.getAttribute('data-user-id');
+                    if (userId) {
+                        fetch('/api/check-follow/' + userId)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.isFollowing) {
+                                    btn.innerHTML = 'Following ✓';
+                                    btn.classList.add('!bg-emerald-600');
+                                }
+                            })
+                            .catch(err => console.error('Error loading follow status:', err));
+                    }
+                });
+            {{end}}
+        }
+
+        document.addEventListener('DOMContentLoaded', loadFollowStatuses);
     </script>
 </body>
 </html>
